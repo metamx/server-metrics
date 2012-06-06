@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx</groupId>
     <artifactId>server-metrics</artifactId>
-    <version>0.3.1-SNAPSHOT</version>
+    <version>0.0.1-SNAPSHOT</version>
     <name>server-metrics</name>
     <description>Emit metrics here</description>
     <scm>
-        <connection>scm:git:ssh://git@github.com/metamx/metrics.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/metamx/metrics.git</developerConnection>
-        <url>http://www.github.com/metamx/metrics</url>
+        <connection>scm:git:ssh://git@github.com/metamx/server-metrics.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/metamx/server-metrics.git</developerConnection>
+        <url>http://www.github.com/metamx/server-metrics</url>
     </scm>
 
     <properties>
@@ -24,8 +24,8 @@
         </dependency>
         <dependency>
             <groupId>com.metamx</groupId>
-            <artifactId>event-emitter-new</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <artifactId>emitter</artifactId>
+            <version>0.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.hyperic</groupId>
@@ -40,12 +40,6 @@
             <version>4.8.1</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.easymock</groupId>
-            <artifactId>easymock</artifactId>
-            <version>3.0</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -53,33 +47,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>2.5.1</version>
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.2</version>
-                <executions>
-                    <execution>
-                        <!-- copy deps for use in japex performance testing -->
-                        <phase>process-test-resources</phase>
-                        <goals>
-                            <goal>copy-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/japex-classpath</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-help-plugin</artifactId>
-                <version>2.1.1</version>
             </plugin>
         </plugins>
     </build>
@@ -88,7 +60,7 @@
         <repository>
             <id>central-local</id>
             <name>Central</name>
-            <url>http://metamx.artifactoryonline.com/metamx/libs-releases-local</url>
+            <url>http://metamx.artifactoryonline.com/metamx/pubs-libs-releases-local</url>
         </repository>
     </distributionManagement>
 </project>
