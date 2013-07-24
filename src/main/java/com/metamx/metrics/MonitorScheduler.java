@@ -16,13 +16,11 @@
 
 package com.metamx.metrics;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 
 import java.util.List;
