@@ -17,13 +17,16 @@
 package com.metamx.metrics;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -34,7 +37,8 @@ public class MonitorScheduler
   private final MonitorSchedulerConfig config;
   private final ScheduledExecutorService exec;
   private final ServiceEmitter emitter;
-  private final List<Monitor> monitors;
+  private final Set<Monitor> monitors;
+  private final Object lock = new Object();
 
   private volatile boolean started = false;
 
@@ -48,77 +52,90 @@ public class MonitorScheduler
     this.config = config;
     this.exec = exec;
     this.emitter = emitter;
-    this.monitors = Lists.newArrayList(monitors);
+    this.monitors = Sets.newHashSet(monitors);
   }
 
   @LifecycleStart
-  public synchronized void start()
+  public void start()
   {
-    if (started) {
-      return;
-    }
-    started = true;
+    synchronized (lock) {
+      if (started) {
+        return;
+      }
+      started = true;
 
-    for (final Monitor monitor : monitors) {
+      for (final Monitor monitor : monitors) {
+        startMonitor(monitor);
+      }
+    }
+  }
+
+  public void addMonitor(final Monitor monitor)
+  {
+    synchronized (lock) {
+      if (!started) {
+        throw new ISE("addMonitor must be called after start");
+      }
+      if (hasMonitor(monitor)) {
+        throw new ISE("Monitor already monitoring: %s", monitor);
+      }
+      monitors.add(monitor);
       startMonitor(monitor);
     }
   }
 
-  public synchronized void addMonitor(final Monitor monitor)
+  public void removeMonitor(final Monitor monitor)
   {
-    if (!started) {
-      throw new ISE("addMonitor must be called after start");
+    synchronized (lock) {
+      monitors.remove(monitor);
+      monitor.stop();
     }
-    if (hasMonitor(monitor)) {
-      throw new ISE("Monitor already monitoring: %s", monitor);
-    }
-    monitors.add(monitor);
-    startMonitor(monitor);
-  }
-
-  public synchronized void removeMonitor(final Monitor monitor)
-  {
-    monitors.remove(monitor);
-    monitor.stop();
   }
 
   @LifecycleStop
-  public synchronized void stop()
+  public void stop()
   {
-    if (!started) {
-      return;
-    }
+    synchronized (lock) {
+      if (!started) {
+        return;
+      }
 
-    started = false;
-    for (Monitor monitor : monitors) {
-      removeMonitor(monitor);
+      started = false;
+      for (Monitor monitor : monitors) {
+        removeMonitor(monitor);
+      }
     }
   }
 
-  private synchronized void startMonitor(final Monitor monitor)
+  private void startMonitor(final Monitor monitor)
   {
-    monitor.start();
-    ScheduledExecutors.scheduleAtFixedRate(
-        exec,
-        config.getEmitterPeriod(),
-        new Callable<ScheduledExecutors.Signal>()
-        {
-          @Override
-          public ScheduledExecutors.Signal call() throws Exception
+    synchronized (lock) {
+      monitor.start();
+      ScheduledExecutors.scheduleAtFixedRate(
+          exec,
+          config.getEmitterPeriod(),
+          new Callable<ScheduledExecutors.Signal>()
           {
-            // Run one more time even if the monitor was removed, in case there's some extra data to flush
-            if (monitor.monitor(emitter) && hasMonitor(monitor)) {
-              return ScheduledExecutors.Signal.REPEAT;
-            } else {
-              return ScheduledExecutors.Signal.STOP;
+            @Override
+            public ScheduledExecutors.Signal call() throws Exception
+            {
+              // Run one more time even if the monitor was removed, in case there's some extra data to flush
+              if (monitor.monitor(emitter) && hasMonitor(monitor)) {
+                return ScheduledExecutors.Signal.REPEAT;
+              } else {
+                removeMonitor(monitor);
+                return ScheduledExecutors.Signal.STOP;
+              }
             }
           }
-        }
-    );
+      );
+    }
   }
 
-  private synchronized boolean hasMonitor(final Monitor monitor)
+  private boolean hasMonitor(final Monitor monitor)
   {
-    return monitors.contains(monitor);
+    synchronized (lock) {
+      return monitors.contains(monitor);
+    }
   }
 }
