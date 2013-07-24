@@ -16,6 +16,8 @@
 
 package com.metamx.metrics;
 
+import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -46,7 +48,7 @@ public class MonitorScheduler
     this.config = config;
     this.exec = exec;
     this.emitter = emitter;
-    this.monitors = monitors;
+    this.monitors = Lists.newArrayList(monitors);
   }
 
   @LifecycleStart
@@ -58,20 +60,26 @@ public class MonitorScheduler
     started = true;
 
     for (final Monitor monitor : monitors) {
-      monitor.start();
-      ScheduledExecutors.scheduleAtFixedRate(
-          exec,
-          config.getEmitterPeriod(),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call() throws Exception
-            {
-              return monitor.monitor(emitter) ? ScheduledExecutors.Signal.REPEAT : ScheduledExecutors.Signal.STOP;
-            }
-          }
-      );
+      startMonitor(monitor);
     }
+  }
+
+  public synchronized void addMonitor(final Monitor monitor)
+  {
+    if (!started) {
+      throw new ISE("addMonitor must be called after start");
+    }
+    if (hasMonitor(monitor)) {
+      throw new ISE("Monitor already monitoring: %s", monitor);
+    }
+    monitors.add(monitor);
+    startMonitor(monitor);
+  }
+
+  public synchronized void removeMonitor(final Monitor monitor)
+  {
+    monitors.remove(monitor);
+    monitor.stop();
   }
 
   @LifecycleStop
@@ -83,7 +91,34 @@ public class MonitorScheduler
 
     started = false;
     for (Monitor monitor : monitors) {
-      monitor.stop();
+      removeMonitor(monitor);
     }
+  }
+
+  private synchronized void startMonitor(final Monitor monitor)
+  {
+    monitor.start();
+    ScheduledExecutors.scheduleAtFixedRate(
+        exec,
+        config.getEmitterPeriod(),
+        new Callable<ScheduledExecutors.Signal>()
+        {
+          @Override
+          public ScheduledExecutors.Signal call() throws Exception
+          {
+            // Run one more time even if the monitor was removed, in case there's some extra data to flush
+            if (monitor.monitor(emitter) && hasMonitor(monitor)) {
+              return ScheduledExecutors.Signal.REPEAT;
+            } else {
+              return ScheduledExecutors.Signal.STOP;
+            }
+          }
+        }
+    );
+  }
+
+  private synchronized boolean hasMonitor(final Monitor monitor)
+  {
+    return monitors.contains(monitor);
   }
 }
