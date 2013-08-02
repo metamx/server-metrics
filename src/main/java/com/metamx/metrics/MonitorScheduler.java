@@ -100,7 +100,7 @@ public class MonitorScheduler
 
       started = false;
       for (Monitor monitor : monitors) {
-        removeMonitor(monitor);
+        monitor.stop();
       }
     }
   }
