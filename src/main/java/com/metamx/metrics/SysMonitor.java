@@ -25,6 +25,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.hyperic.sigar.Cpu;
+import org.hyperic.sigar.DirUsage;
 import org.hyperic.sigar.DiskUsage;
 import org.hyperic.sigar.FileSystem;
 import org.hyperic.sigar.FileSystemUsage;
@@ -33,10 +34,13 @@ import org.hyperic.sigar.NetInterfaceConfig;
 import org.hyperic.sigar.NetInterfaceStat;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
+import org.hyperic.sigar.SigarFileNotFoundException;
 import org.hyperic.sigar.SigarLoader;
 
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -49,13 +53,19 @@ public class SysMonitor extends AbstractMonitor
   private final List<String> fsTypeWhitelist     = ImmutableList.of("local");
   private final List<String> netAddressBlacklist = ImmutableList.of("0.0.0.0", "127.0.0.1");
 
-  private final Stats[] statsList = new Stats[] {
-    new MemStats(),
-    new FsStats(),
-    new DiskStats(),
-    new NetStats(),
-    new CpuStats()
-  };
+  private final List<Stats> statsList;
+
+  public SysMonitor()
+  {
+    this.statsList = new ArrayList<Stats>();
+    this.statsList.addAll(Arrays.asList(
+        new MemStats(),
+        new FsStats(),
+        new DiskStats(),
+        new NetStats(),
+        new CpuStats()
+    ));
+  }
 
   static {
     SigarLoader loader = new SigarLoader(Sigar.class);
@@ -80,6 +90,10 @@ public class SysMonitor extends AbstractMonitor
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public void addDirectoriesToMonitor(String[] dirList){
+    statsList.add(new DirStats(dirList));
   }
 
   @Override
@@ -116,6 +130,41 @@ public class SysMonitor extends AbstractMonitor
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+      }
+    }
+  }
+
+  private class DirStats implements Stats
+  {
+    private final String[] dirList;
+
+    private DirStats(String[] dirList)
+    {
+      this.dirList = dirList;
+    }
+
+    @Override
+    public void emit(ServiceEmitter emitter)
+    {
+      for (String d : dirList) {
+        String dir = d.trim();
+        DirUsage du = null;
+        try {
+          du = sigar.getDirUsage(dir);
+        }
+        catch (SigarException e) {
+          log.error("Failed to get DiskUsage due to [%s] Directory not found. [%s]", dir, e.getMessage());
+        }
+        if (du != null) {
+          final Map<String, Long> stats = ImmutableMap.of(
+              "sys/storage/used", du.getDiskUsage()
+          );
+          final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
+              .setUser2(dir); // user2 because FsStats uses user2
+          for (Map.Entry<String, Long> entry : stats.entrySet()) {
+            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          }
         }
       }
     }
