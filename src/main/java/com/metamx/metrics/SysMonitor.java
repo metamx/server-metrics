@@ -93,6 +93,9 @@ public class SysMonitor extends AbstractMonitor
   }
 
   public void addDirectoriesToMonitor(String[] dirList){
+    for (int i = 0; i < dirList.length; i++){
+      dirList[i] = dirList[i].trim();
+    }
     statsList.add(new DirStats(dirList));
   }
 
@@ -147,14 +150,13 @@ public class SysMonitor extends AbstractMonitor
     @Override
     public void emit(ServiceEmitter emitter)
     {
-      for (String d : dirList) {
-        String dir = d.trim();
+      for (String dir : dirList) {
         DirUsage du = null;
         try {
           du = sigar.getDirUsage(dir);
         }
         catch (SigarException e) {
-          log.error("Failed to get DiskUsage due to [%s] Directory not found. [%s]", dir, e.getMessage());
+          log.error("Failed to get DiskUsage for [%s] due to   [%s]", dir, e.getMessage());
         }
         if (du != null) {
           final Map<String, Long> stats = ImmutableMap.of(
