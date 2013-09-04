@@ -36,6 +36,7 @@ import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
 import org.hyperic.sigar.SigarFileNotFoundException;
 import org.hyperic.sigar.SigarLoader;
+import org.hyperic.sigar.Swap;
 
 import java.io.File;
 import java.net.URL;
@@ -63,7 +64,8 @@ public class SysMonitor extends AbstractMonitor
         new FsStats(),
         new DiskStats(),
         new NetStats(),
-        new CpuStats()
+        new CpuStats(),
+        new SwapStats()
     ));
   }
 
@@ -129,6 +131,33 @@ public class SysMonitor extends AbstractMonitor
         final Map<String, Long> stats = ImmutableMap.of(
             "sys/mem/max",  mem.getTotal(),
             "sys/mem/used", mem.getUsed()
+        );
+        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+        for (Map.Entry<String, Long> entry : stats.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+      }
+    }
+  }
+
+  private class SwapStats implements Stats
+  {
+    @Override
+    public void emit(ServiceEmitter emitter)
+    {
+      Swap swap = null;
+      try {
+        swap = sigar.getSwap();
+      }
+      catch (SigarException e) {
+        log.error(e, "Failed to get Swap");
+      }
+      if (swap != null) {
+        final Map<String, Long> stats = ImmutableMap.of(
+            "sys/swap/pageIn",  swap.getPageIn(),
+            "sys/swap/pageOut", swap.getPageOut(),
+            "sys/swap/max", swap.getTotal(),
+            "sys/swap/free", swap.getFree()
         );
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
