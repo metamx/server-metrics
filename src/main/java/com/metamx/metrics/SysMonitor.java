@@ -25,6 +25,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.hyperic.sigar.Cpu;
+import org.hyperic.sigar.DirUsage;
 import org.hyperic.sigar.DiskUsage;
 import org.hyperic.sigar.FileSystem;
 import org.hyperic.sigar.FileSystemUsage;
@@ -33,10 +34,14 @@ import org.hyperic.sigar.NetInterfaceConfig;
 import org.hyperic.sigar.NetInterfaceStat;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
+import org.hyperic.sigar.SigarFileNotFoundException;
 import org.hyperic.sigar.SigarLoader;
+import org.hyperic.sigar.Swap;
 
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -46,16 +51,25 @@ public class SysMonitor extends AbstractMonitor
 
   private final Sigar sigar = new Sigar();
 
-  private final List<String> fsTypeWhitelist     = ImmutableList.of("local");
+  private final List<String> fsTypeWhitelist = ImmutableList.of("local");
   private final List<String> netAddressBlacklist = ImmutableList.of("0.0.0.0", "127.0.0.1");
 
-  private final Stats[] statsList = new Stats[] {
-    new MemStats(),
-    new FsStats(),
-    new DiskStats(),
-    new NetStats(),
-    new CpuStats()
-  };
+  private final List<Stats> statsList;
+
+  public SysMonitor()
+  {
+    this.statsList = new ArrayList<Stats>();
+    this.statsList.addAll(
+        Arrays.asList(
+            new MemStats(),
+            new FsStats(),
+            new DiskStats(),
+            new NetStats(),
+            new CpuStats(),
+            new SwapStats()
+        )
+    );
+  }
 
   static {
     SigarLoader loader = new SigarLoader(Sigar.class);
@@ -72,14 +86,21 @@ public class SysMonitor extends AbstractMonitor
         StreamUtils.copyToFileAndClose(url.openStream(), nativeLibTmpFile);
         log.info("Loading sigar native lib at tmpPath[%s]", nativeLibTmpFile);
         loader.load(nativeLibTmpFile.getParent());
-      }
-      else {
+      } else {
         log.info("No native libs found in jar, letting the normal load mechanisms figger it out.");
       }
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public void addDirectoriesToMonitor(String[] dirList)
+  {
+    for (int i = 0; i < dirList.length; i++) {
+      dirList[i] = dirList[i].trim();
+    }
+    statsList.add(new DirStats(dirList));
   }
 
   @Override
@@ -110,12 +131,101 @@ public class SysMonitor extends AbstractMonitor
       }
       if (mem != null) {
         final Map<String, Long> stats = ImmutableMap.of(
-            "sys/mem/max",  mem.getTotal(),
+            "sys/mem/max", mem.getTotal(),
             "sys/mem/used", mem.getUsed()
         );
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+      }
+    }
+  }
+
+  /**
+   * Gets the swap stats from sigar and emits the periodic pages in & pages out of memory
+   * along with the max swap and free swap memory.
+   */
+  private class SwapStats implements Stats
+  {
+    private long prevPageIn = 0, prevPageOut = 0;
+
+    private SwapStats()
+    {
+      try {
+        Swap swap = sigar.getSwap();
+        this.prevPageIn = swap.getPageIn();
+        this.prevPageOut = swap.getPageOut();
+      }
+      catch (SigarException e) {
+        log.error(e, "Failed to get Swap");
+      }
+    }
+
+    @Override
+    public void emit(ServiceEmitter emitter)
+    {
+      Swap swap = null;
+      try {
+        swap = sigar.getSwap();
+      }
+      catch (SigarException e) {
+        log.error(e, "Failed to get Swap");
+      }
+      if (swap != null) {
+        long currPageIn = swap.getPageIn();
+        long currPageOut = swap.getPageOut();
+
+        final Map<String, Long> stats = ImmutableMap.of(
+            "sys/swap/pageIn", (currPageIn - prevPageIn),
+            "sys/swap/pageOut", (currPageOut - prevPageOut),
+            "sys/swap/max", swap.getTotal(),
+            "sys/swap/free", swap.getFree()
+        );
+
+        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+        for (Map.Entry<String, Long> entry : stats.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+
+        this.prevPageIn = currPageIn;
+        this.prevPageOut = currPageOut;
+      }
+    }
+  }
+
+  /**
+   * Gets the disk usage of a particular directory.
+   */
+  private class DirStats implements Stats
+  {
+    private final String[] dirList;
+
+    private DirStats(String[] dirList)
+    {
+      this.dirList = dirList;
+    }
+
+    @Override
+    public void emit(ServiceEmitter emitter)
+    {
+      for (String dir : dirList) {
+        DirUsage du = null;
+        try {
+          du = sigar.getDirUsage(dir);
+        }
+        catch (SigarException e) {
+          log.error("Failed to get DiskUsage for [%s] due to   [%s]", dir, e.getMessage());
+        }
+        if (du != null) {
+          final Map<String, Long> stats = ImmutableMap.of(
+              "sys/storage/used", du.getDiskUsage()
+          );
+          final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
+              .setUser2(dir); // user2 because FsStats uses user2
+          for (Map.Entry<String, Long> entry : stats.entrySet()) {
+            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          }
         }
       }
     }
@@ -147,8 +257,8 @@ public class SysMonitor extends AbstractMonitor
             }
             if (fsu != null) {
               final Map<String, Long> stats = ImmutableMap.of(
-                  "sys/fs/max",  fsu.getTotal() * 1024,
-                  "sys/fs/used", fsu.getUsed()  * 1024
+                  "sys/fs/max", fsu.getTotal() * 1024,
+                  "sys/fs/used", fsu.getUsed() * 1024
               );
               final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                   .setUser1(fs.getDevName())
@@ -160,8 +270,7 @@ public class SysMonitor extends AbstractMonitor
                 emitter.emit(builder.build(entry.getKey(), entry.getValue()));
               }
             }
-          }
-          else {
+          } else {
             log.debug("Not monitoring fs stats for name[%s] with typeName[%s]", name, fs.getTypeName());
           }
         }
@@ -196,12 +305,14 @@ public class SysMonitor extends AbstractMonitor
               log.error(e, "Failed to get DiskUsage[%s]", name);
             }
             if (du != null) {
-              final Map<String, Long> stats = diff.to(name, ImmutableMap.of(
-                  "sys/disk/read/size",   du.getReadBytes(),
-                  "sys/disk/read/count",  du.getReads(),
-                  "sys/disk/write/size",  du.getWriteBytes(),
+              final Map<String, Long> stats = diff.to(
+                  name, ImmutableMap.of(
+                  "sys/disk/read/size", du.getReadBytes(),
+                  "sys/disk/read/count", du.getReads(),
+                  "sys/disk/write/size", du.getWriteBytes(),
                   "sys/disk/write/count", du.getWrites()
-              ));
+              )
+              );
               if (stats != null) {
                 final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                     .setUser1(fs.getDevName())
@@ -214,8 +325,7 @@ public class SysMonitor extends AbstractMonitor
                 }
               }
             }
-          }
-          else {
+          } else {
             log.debug("Not monitoring disk stats for name[%s] with typeName[%s]", name, fs.getTypeName());
           }
         }
@@ -257,10 +367,12 @@ public class SysMonitor extends AbstractMonitor
                 log.error(e, "Failed to get NetInterfaceStat[%s]", name);
               }
               if (netstat != null) {
-                final Map<String, Long> stats = diff.to(name, ImmutableMap.of(
-                    "sys/net/read/size",  netstat.getRxBytes(),
+                final Map<String, Long> stats = diff.to(
+                    name, ImmutableMap.of(
+                    "sys/net/read/size", netstat.getRxBytes(),
                     "sys/net/write/size", netstat.getTxBytes()
-                ));
+                )
+                );
                 if (stats != null) {
                   final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                       .setUser1(netconf.getName())
@@ -271,8 +383,7 @@ public class SysMonitor extends AbstractMonitor
                   }
                 }
               }
-            }
-            else {
+            } else {
               log.debug("Not monitoring net stats for name[%s] with address[%s]", name, netconf.getAddress());
             }
           }
@@ -300,20 +411,22 @@ public class SysMonitor extends AbstractMonitor
         for (int i = 0; i < cpus.length; ++i) {
           final Cpu cpu = cpus[i];
           final String name = Integer.toString(i);
-          final Map<String, Long> stats = diff.to(name, ImmutableMap.of(
-              "user",   cpu.getUser(), // user = Δuser / Δtotal
-              "sys",    cpu.getSys(),  // sys  = Δsys  / Δtotal
-              "nice",   cpu.getNice(), // nice = Δnice / Δtotal
-              "wait",   cpu.getWait(), // wait = Δwait / Δtotal
+          final Map<String, Long> stats = diff.to(
+              name, ImmutableMap.of(
+              "user", cpu.getUser(), // user = Δuser / Δtotal
+              "sys", cpu.getSys(),  // sys  = Δsys  / Δtotal
+              "nice", cpu.getNice(), // nice = Δnice / Δtotal
+              "wait", cpu.getWait(), // wait = Δwait / Δtotal
               "_total", cpu.getTotal() // (not reported)
-          ));
+          )
+          );
           if (stats != null) {
             final long total = stats.remove("_total");
             for (Map.Entry<String, Long> entry : stats.entrySet()) {
               final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                   .setUser1(name)
                   .setUser2(entry.getKey());
-              emitter.emit(builder.build("sys/cpu", entry.getValue()*100 / total)); // [0,100]
+              emitter.emit(builder.build("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
           }
         }
