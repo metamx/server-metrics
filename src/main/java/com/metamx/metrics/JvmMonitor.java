@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
+import java.lang.management.BufferPoolMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
@@ -79,6 +80,15 @@ public class JvmMonitor extends AbstractMonitor
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
       }
+    }
+
+    // direct memory usage
+    for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
+          .setUser2(pool.getName());
+      emitter.emit(builder.build("jvm/bufferpool/capacity", pool.getTotalCapacity()));
+      emitter.emit(builder.build("jvm/bufferpool/used", pool.getMemoryUsed()));
+      emitter.emit(builder.build("jvm/bufferpool/count", pool.getCount()));
     }
 
     return true;
