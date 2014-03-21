@@ -3,14 +3,15 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metamx</groupId>
     <artifactId>server-metrics</artifactId>
-    <version>0.0.6-SNAPSHOT</version>
+    <version>0.0.7-SNAPSHOT</version>
     <name>server-metrics</name>
     <description>Emit metrics here</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/server-metrics.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/server-metrics.git</developerConnection>
         <url>http://www.github.com/metamx/server-metrics</url>
-    </scm>
+      <tag>HEAD</tag>
+  </scm>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
