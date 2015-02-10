@@ -72,9 +72,13 @@
             <version>0.3.0</version>
         </dependency>
         <dependency>
+            <!-- sigar is only required for com.metamx.metrics.SysMonitor
+                 use the following repository to resolve this dependency
+                 https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/ -->
             <groupId>org.hyperic</groupId>
             <artifactId>sigar</artifactId>
             <version>1.6.5.132</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Tests -->
