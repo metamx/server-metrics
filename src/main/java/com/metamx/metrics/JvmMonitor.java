@@ -47,7 +47,7 @@ public class JvmMonitor extends AbstractMonitor
       final String kind = entry.getKey();
       final MemoryUsage usage = entry.getValue();
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-          .setUser1(kind);
+          .setDimension("memKind", kind);
       emitter.emit(builder.build("jvm/mem/max",       usage.getMax()));
       emitter.emit(builder.build("jvm/mem/committed", usage.getCommitted()));
       emitter.emit(builder.build("jvm/mem/used",      usage.getUsed()));
@@ -59,8 +59,8 @@ public class JvmMonitor extends AbstractMonitor
       final String kind = pool.getType() == MemoryType.HEAP ? "heap" : "nonheap";
       final MemoryUsage usage = pool.getUsage();
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-          .setUser1(kind)
-          .setUser2(pool.getName());
+          .setDimension("poolKind", kind)
+          .setDimension("poolName", pool.getName());
       emitter.emit(builder.build("jvm/pool/max",       usage.getMax()));
       emitter.emit(builder.build("jvm/pool/committed", usage.getCommitted()));
       emitter.emit(builder.build("jvm/pool/used",      usage.getUsed()));
@@ -75,7 +75,7 @@ public class JvmMonitor extends AbstractMonitor
       ));
       if (diff != null) {
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-            .setUser1(gc.getName());
+            .setDimension("gcName", gc.getName());
         for (Map.Entry<String, Long> entry : diff.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
@@ -85,7 +85,7 @@ public class JvmMonitor extends AbstractMonitor
     // direct memory usage
     for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-          .setUser2(pool.getName());
+          .setDimension("bufferpoolName", pool.getName());
       emitter.emit(builder.build("jvm/bufferpool/capacity", pool.getTotalCapacity()));
       emitter.emit(builder.build("jvm/bufferpool/used", pool.getMemoryUsed()));
       emitter.emit(builder.build("jvm/bufferpool/count", pool.getCount()));
