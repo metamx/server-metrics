@@ -222,7 +222,7 @@ public class SysMonitor extends AbstractMonitor
               "sys/storage/used", du.getDiskUsage()
           );
           final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-              .setUser2(dir); // user2 because FsStats uses user2
+              .setDimension("fsDirName", dir); // fsDirName because FsStats uses fsDirName
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
             emitter.emit(builder.build(entry.getKey(), entry.getValue()));
           }
@@ -261,11 +261,11 @@ public class SysMonitor extends AbstractMonitor
                   "sys/fs/used", fsu.getUsed() * 1024
               );
               final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-                  .setUser1(fs.getDevName())
-                  .setUser2(fs.getDirName())
-                  .setUser3(fs.getTypeName())
-                  .setUser4(fs.getSysTypeName())
-                  .setUser5(fs.getOptions().split(","));
+                  .setDimension("fsDevName", fs.getDevName())
+                  .setDimension("fsDirName", fs.getDirName())
+                  .setDimension("fsTypeName", fs.getTypeName())
+                  .setDimension("fsSysTypeName", fs.getSysTypeName())
+                  .setDimension("fsOptions", fs.getOptions().split(","));
               for (Map.Entry<String, Long> entry : stats.entrySet()) {
                 emitter.emit(builder.build(entry.getKey(), entry.getValue()));
               }
@@ -315,11 +315,11 @@ public class SysMonitor extends AbstractMonitor
               );
               if (stats != null) {
                 final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-                    .setUser1(fs.getDevName())
-                    .setUser2(fs.getDirName())
-                    .setUser3(fs.getTypeName())
-                    .setUser4(fs.getSysTypeName())
-                    .setUser5(fs.getOptions().split(","));
+                    .setDimension("fsDevName", fs.getDevName())
+                    .setDimension("fsDirName", fs.getDirName())
+                    .setDimension("fsTypeName", fs.getTypeName())
+                    .setDimension("fsSysTypeName", fs.getSysTypeName())
+                    .setDimension("fsOptions", fs.getOptions().split(","));
                 for (Map.Entry<String, Long> entry : stats.entrySet()) {
                   emitter.emit(builder.build(entry.getKey(), entry.getValue()));
                 }
@@ -375,9 +375,9 @@ public class SysMonitor extends AbstractMonitor
                 );
                 if (stats != null) {
                   final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-                      .setUser1(netconf.getName())
-                      .setUser2(netconf.getAddress())
-                      .setUser3(netconf.getHwaddr());
+                      .setDimension("netName", netconf.getName())
+                      .setDimension("netAddress", netconf.getAddress())
+                      .setDimension("netHwaddr", netconf.getHwaddr());
                   for (Map.Entry<String, Long> entry : stats.entrySet()) {
                     emitter.emit(builder.build(entry.getKey(), entry.getValue()));
                   }
@@ -424,8 +424,8 @@ public class SysMonitor extends AbstractMonitor
             final long total = stats.remove("_total");
             for (Map.Entry<String, Long> entry : stats.entrySet()) {
               final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-                  .setUser1(name)
-                  .setUser2(entry.getKey());
+                  .setDimension("cpuName", name)
+                  .setDimension("cpuTime", entry.getKey());
               emitter.emit(builder.build("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
           }
