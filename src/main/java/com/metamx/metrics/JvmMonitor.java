@@ -16,10 +16,10 @@
 
 package com.metamx.metrics;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -31,6 +31,19 @@ import java.util.Map;
 public class JvmMonitor extends AbstractMonitor
 {
   private final KeyedDiff gcDiff = new KeyedDiff();
+
+  private Map<String, String[]> dimensions;
+
+  public JvmMonitor()
+  {
+    this(ImmutableMap.<String, String[]>of());
+  }
+
+  public JvmMonitor(Map<String, String[]> dimensions)
+  {
+    Preconditions.checkNotNull(dimensions);
+    this.dimensions = ImmutableMap.copyOf(dimensions);
+  }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
@@ -48,6 +61,8 @@ public class JvmMonitor extends AbstractMonitor
       final MemoryUsage usage = entry.getValue();
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
           .setDimension("memKind", kind);
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
       emitter.emit(builder.build("jvm/mem/max",       usage.getMax()));
       emitter.emit(builder.build("jvm/mem/committed", usage.getCommitted()));
       emitter.emit(builder.build("jvm/mem/used",      usage.getUsed()));
@@ -61,6 +76,8 @@ public class JvmMonitor extends AbstractMonitor
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
           .setDimension("poolKind", kind)
           .setDimension("poolName", pool.getName());
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
       emitter.emit(builder.build("jvm/pool/max",       usage.getMax()));
       emitter.emit(builder.build("jvm/pool/committed", usage.getCommitted()));
       emitter.emit(builder.build("jvm/pool/used",      usage.getUsed()));
@@ -76,6 +93,8 @@ public class JvmMonitor extends AbstractMonitor
       if (diff != null) {
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
             .setDimension("gcName", gc.getName());
+        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
         for (Map.Entry<String, Long> entry : diff.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
@@ -86,6 +105,8 @@ public class JvmMonitor extends AbstractMonitor
     for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
           .setDimension("bufferpoolName", pool.getName());
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
       emitter.emit(builder.build("jvm/bufferpool/capacity", pool.getTotalCapacity()));
       emitter.emit(builder.build("jvm/bufferpool/used", pool.getMemoryUsed()));
       emitter.emit(builder.build("jvm/bufferpool/count", pool.getCount()));

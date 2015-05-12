@@ -17,6 +17,7 @@
 package com.metamx.metrics;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -24,6 +25,12 @@ import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import java.io.File;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import org.hyperic.sigar.Cpu;
 import org.hyperic.sigar.DirUsage;
 import org.hyperic.sigar.DiskUsage;
@@ -34,16 +41,8 @@ import org.hyperic.sigar.NetInterfaceConfig;
 import org.hyperic.sigar.NetInterfaceStat;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
-import org.hyperic.sigar.SigarFileNotFoundException;
 import org.hyperic.sigar.SigarLoader;
 import org.hyperic.sigar.Swap;
-
-import java.io.File;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 public class SysMonitor extends AbstractMonitor
 {
@@ -56,8 +55,18 @@ public class SysMonitor extends AbstractMonitor
 
   private final List<Stats> statsList;
 
+  private Map<String, String[]> dimensions;
+
   public SysMonitor()
   {
+    this(ImmutableMap.<String, String[]>of());
+  }
+
+  public SysMonitor(Map<String, String[]> dimensions)
+  {
+    Preconditions.checkNotNull(dimensions);
+    this.dimensions = ImmutableMap.copyOf(dimensions);
+
     this.statsList = new ArrayList<Stats>();
     this.statsList.addAll(
         Arrays.asList(
@@ -135,6 +144,7 @@ public class SysMonitor extends AbstractMonitor
             "sys/mem/used", mem.getUsed()
         );
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
@@ -184,6 +194,7 @@ public class SysMonitor extends AbstractMonitor
         );
 
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
@@ -223,6 +234,7 @@ public class SysMonitor extends AbstractMonitor
           );
           final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
               .setDimension("fsDirName", dir); // fsDirName because FsStats uses fsDirName
+          MonitorUtils.addDimensionsToBuilder(builder, dimensions);
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
             emitter.emit(builder.build(entry.getKey(), entry.getValue()));
           }
@@ -266,6 +278,7 @@ public class SysMonitor extends AbstractMonitor
                   .setDimension("fsTypeName", fs.getTypeName())
                   .setDimension("fsSysTypeName", fs.getSysTypeName())
                   .setDimension("fsOptions", fs.getOptions().split(","));
+              MonitorUtils.addDimensionsToBuilder(builder, dimensions);
               for (Map.Entry<String, Long> entry : stats.entrySet()) {
                 emitter.emit(builder.build(entry.getKey(), entry.getValue()));
               }
@@ -320,6 +333,7 @@ public class SysMonitor extends AbstractMonitor
                     .setDimension("fsTypeName", fs.getTypeName())
                     .setDimension("fsSysTypeName", fs.getSysTypeName())
                     .setDimension("fsOptions", fs.getOptions().split(","));
+                MonitorUtils.addDimensionsToBuilder(builder, dimensions);
                 for (Map.Entry<String, Long> entry : stats.entrySet()) {
                   emitter.emit(builder.build(entry.getKey(), entry.getValue()));
                 }
@@ -378,6 +392,7 @@ public class SysMonitor extends AbstractMonitor
                       .setDimension("netName", netconf.getName())
                       .setDimension("netAddress", netconf.getAddress())
                       .setDimension("netHwaddr", netconf.getHwaddr());
+                  MonitorUtils.addDimensionsToBuilder(builder, dimensions);
                   for (Map.Entry<String, Long> entry : stats.entrySet()) {
                     emitter.emit(builder.build(entry.getKey(), entry.getValue()));
                   }
@@ -426,6 +441,7 @@ public class SysMonitor extends AbstractMonitor
               final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                   .setDimension("cpuName", name)
                   .setDimension("cpuTime", entry.getKey());
+              MonitorUtils.addDimensionsToBuilder(builder, dimensions);
               emitter.emit(builder.build("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
           }
