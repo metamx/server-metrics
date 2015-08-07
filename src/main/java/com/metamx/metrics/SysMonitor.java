@@ -39,10 +39,13 @@ import org.hyperic.sigar.FileSystemUsage;
 import org.hyperic.sigar.Mem;
 import org.hyperic.sigar.NetInterfaceConfig;
 import org.hyperic.sigar.NetInterfaceStat;
+import org.hyperic.sigar.NetStat;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
 import org.hyperic.sigar.SigarLoader;
 import org.hyperic.sigar.Swap;
+import org.hyperic.sigar.Tcp;
+import org.hyperic.sigar.Uptime;
 
 public class SysMonitor extends AbstractMonitor
 {
@@ -75,7 +78,9 @@ public class SysMonitor extends AbstractMonitor
             new DiskStats(),
             new NetStats(),
             new CpuStats(),
-            new SwapStats()
+            new SwapStats(),
+            new SysStats(),
+            new TcpStats()
         )
     );
   }
@@ -141,7 +146,9 @@ public class SysMonitor extends AbstractMonitor
       if (mem != null) {
         final Map<String, Long> stats = ImmutableMap.of(
             "sys/mem/max", mem.getTotal(),
-            "sys/mem/used", mem.getUsed()
+            "sys/mem/used", mem.getUsed(),
+            "sys/mem/actual/used", mem.getActualUsed(),
+            "sys/mem/actual/free", mem.getActualFree()
         );
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
@@ -268,10 +275,12 @@ public class SysMonitor extends AbstractMonitor
               log.error(e, "Failed to get FileSystemUsage[%s]", name);
             }
             if (fsu != null) {
-              final Map<String, Long> stats = ImmutableMap.of(
-                  "sys/fs/max", fsu.getTotal() * 1024,
-                  "sys/fs/used", fsu.getUsed() * 1024
-              );
+              final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
+                  .put("sys/fs/max", fsu.getTotal() * 1024)
+                  .put("sys/fs/used", fsu.getTotal() * 1024)
+                  .put("sys/fs/files/count", fsu.getFiles())
+                  .put("sys/fs/files/free", fsu.getFreeFiles())
+                .build();
               final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                   .setDimension("fsDevName", fs.getDevName())
                   .setDimension("fsDirName", fs.getDirName())
@@ -319,12 +328,14 @@ public class SysMonitor extends AbstractMonitor
             }
             if (du != null) {
               final Map<String, Long> stats = diff.to(
-                  name, ImmutableMap.of(
-                  "sys/disk/read/size", du.getReadBytes(),
-                  "sys/disk/read/count", du.getReads(),
-                  "sys/disk/write/size", du.getWriteBytes(),
-                  "sys/disk/write/count", du.getWrites()
-              )
+                  name, ImmutableMap.<String, Long>builder()
+                      .put("sys/disk/read/size", du.getReadBytes())
+                      .put("sys/disk/read/count", du.getReads())
+                      .put("sys/disk/write/size", du.getWriteBytes())
+                      .put("sys/disk/write/count", du.getWrites())
+                      .put("sys/disk/queue", Double.valueOf(du.getQueue()).longValue())
+                      .put("sys/disk/serviceTime", Double.valueOf(du.getServiceTime()).longValue())
+                    .build()
               );
               if (stats != null) {
                 final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
@@ -382,10 +393,20 @@ public class SysMonitor extends AbstractMonitor
               }
               if (netstat != null) {
                 final Map<String, Long> stats = diff.to(
-                    name, ImmutableMap.of(
-                    "sys/net/read/size", netstat.getRxBytes(),
-                    "sys/net/write/size", netstat.getTxBytes()
-                )
+                    name, ImmutableMap.<String, Long>builder()
+                      .put("sys/net/read/size", netstat.getRxBytes())
+                      .put("sys/net/read/packets", netstat.getRxPackets())
+                      .put("sys/net/read/errors", netstat.getRxErrors())
+                      .put("sys/net/read/dropped", netstat.getRxDropped())
+                      .put("sys/net/read/overruns", netstat.getRxOverruns())
+                      .put("sys/net/read/frame", netstat.getRxFrame())
+                      .put("sys/net/write/size", netstat.getTxBytes())
+                      .put("sys/net/write/packets", netstat.getTxPackets())
+                      .put("sys/net/write/errors", netstat.getTxErrors())
+                      .put("sys/net/write/dropped", netstat.getTxDropped())
+                      .put("sys/net/write/collisions", netstat.getTxCollisions())
+                      .put("sys/net/write/overruns", netstat.getTxOverruns())
+                    .build()
                 );
                 if (stats != null) {
                   final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
@@ -427,13 +448,16 @@ public class SysMonitor extends AbstractMonitor
           final Cpu cpu = cpus[i];
           final String name = Integer.toString(i);
           final Map<String, Long> stats = diff.to(
-              name, ImmutableMap.of(
-              "user", cpu.getUser(), // user = Δuser / Δtotal
-              "sys", cpu.getSys(),  // sys  = Δsys  / Δtotal
-              "nice", cpu.getNice(), // nice = Δnice / Δtotal
-              "wait", cpu.getWait(), // wait = Δwait / Δtotal
-              "_total", cpu.getTotal() // (not reported)
-          )
+              name, ImmutableMap.<String, Long>builder()
+                  .put("user", cpu.getUser()) // user = Δuser / Δtotal
+                  .put("sys", cpu.getSys()) // sys = Δsys / Δtotal
+                  .put("nice", cpu.getNice()) // nice = Δnice / Δtotal
+                  .put("wait", cpu.getWait()) // wait = Δwait / Δtotal
+                  .put("irq", cpu.getIrq()) // irq = Δirq / Δtotal
+                  .put("softIrq", cpu.getSoftIrq()) // softIrq = ΔsoftIrq / Δtotal
+                  .put("stolen", cpu.getStolen()) // stolen = Δstolen / Δtotal
+                  .put("_total", cpu.getTotal()) // (not reported)
+                .build()
           );
           if (stats != null) {
             final long total = stats.remove("_total");
@@ -445,6 +469,122 @@ public class SysMonitor extends AbstractMonitor
               emitter.emit(builder.build("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
           }
+        }
+      }
+    }
+  }
+
+  private class SysStats implements Stats
+  {
+    @Override
+    public void emit(ServiceEmitter emitter)
+    {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
+      Uptime uptime = null;
+      try {
+        uptime = sigar.getUptime();
+      }
+      catch (SigarException e) {
+        log.error(e, "Failed to get Uptime");
+      }
+
+      double[] la = null;
+      try {
+        la = sigar.getLoadAverage();
+      } catch (SigarException e) {
+        log.error(e, "Failed to get Load Average");
+      }
+
+      if (uptime != null) {
+        final Map<String, Number> stats = ImmutableMap.<String, Number>of(
+            "sys/uptime", Double.valueOf(uptime.getUptime()).longValue()
+        );
+        for (Map.Entry<String, Number> entry : stats.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+      }
+
+      if (la != null) {
+        final Map<String, Number> stats = ImmutableMap.<String, Number>of(
+            "sys/la/1", la[0],
+            "sys/la/5", la[1],
+            "sys/la/15", la[2]
+        );
+        for (Map.Entry<String, Number> entry : stats.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+      }
+    }
+  }
+
+  private class TcpStats implements Stats
+  {
+    private final KeyedDiff diff = new KeyedDiff();
+
+    @Override
+    public void emit(ServiceEmitter emitter)
+    {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
+      Tcp tcp = null;
+      try {
+        tcp = sigar.getTcp();
+      }
+      catch (SigarException e) {
+        log.error(e, "Failed to get Tcp");
+      }
+
+      if (tcp != null) {
+        final Map<String, Long> stats = diff.to("tcp", ImmutableMap.<String, Long>builder()
+            .put("sys/tcp/activeOpens", tcp.getActiveOpens())
+            .put("sys/tcp/passiveOpens", tcp.getPassiveOpens())
+            .put("sys/tcp/attemptFails", tcp.getAttemptFails())
+            .put("sys/tcp/estabResets", tcp.getEstabResets())
+            .put("sys/tcp/in/segs", tcp.getInSegs())
+            .put("sys/tcp/in/errs", tcp.getInErrs())
+            .put("sys/tcp/out/segs", tcp.getOutSegs())
+            .put("sys/tcp/out/rsts", tcp.getOutRsts())
+            .put("sys/tcp/retrans/segs", tcp.getRetransSegs())
+          .build()
+        );
+        for (Map.Entry<String, Long> entry : stats.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+      }
+
+      NetStat netStat = null;
+      try {
+        netStat = sigar.getNetStat();
+      }
+      catch (SigarException e) {
+        log.error(e, "Failed to get NetStat");
+      }
+      if (netStat != null) {
+        final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
+            .put("sys/net/inbound", (long) netStat.getAllInboundTotal())
+            .put("sys/net/outbound", (long) netStat.getAllOutboundTotal())
+            .put("sys/tcp/inbound", (long) netStat.getTcpInboundTotal())
+            .put("sys/tcp/outbound", (long) netStat.getTcpOutboundTotal())
+            .put("sys/tcp/state/established", (long) netStat.getTcpEstablished())
+            .put("sys/tcp/state/established", (long) netStat.getTcpEstablished())
+            .put("sys/tcp/state/synSent", (long) netStat.getTcpSynSent())
+            .put("sys/tcp/state/synRecv", (long) netStat.getTcpSynRecv())
+            .put("sys/tcp/state/finWait1", (long) netStat.getTcpFinWait1())
+            .put("sys/tcp/state/finWait2", (long) netStat.getTcpFinWait2())
+            .put("sys/tcp/state/timeWait", (long) netStat.getTcpTimeWait())
+            .put("sys/tcp/state/close", (long) netStat.getTcpClose())
+            .put("sys/tcp/state/closeWait", (long) netStat.getTcpCloseWait())
+            .put("sys/tcp/state/lastAck", (long) netStat.getTcpLastAck())
+            .put("sys/tcp/state/listen", (long) netStat.getTcpListen())
+            .put("sys/tcp/state/closing", (long) netStat.getTcpClosing())
+            .put("sys/tcp/state/idle", (long) netStat.getTcpIdle())
+            .put("sys/tcp/state/bound", (long) netStat.getTcpBound())
+          .build();
+        for (Map.Entry<String, Long> entry : stats.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
       }
     }
