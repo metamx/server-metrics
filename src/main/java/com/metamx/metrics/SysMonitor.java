@@ -569,7 +569,6 @@ public class SysMonitor extends AbstractMonitor
             .put("sys/tcp/inbound", (long) netStat.getTcpInboundTotal())
             .put("sys/tcp/outbound", (long) netStat.getTcpOutboundTotal())
             .put("sys/tcp/state/established", (long) netStat.getTcpEstablished())
-            .put("sys/tcp/state/established", (long) netStat.getTcpEstablished())
             .put("sys/tcp/state/synSent", (long) netStat.getTcpSynSent())
             .put("sys/tcp/state/synRecv", (long) netStat.getTcpSynRecv())
             .put("sys/tcp/state/finWait1", (long) netStat.getTcpFinWait1())
