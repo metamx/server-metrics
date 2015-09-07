@@ -550,8 +550,10 @@ public class SysMonitor extends AbstractMonitor
             .put("sys/tcp/retrans/segs", tcp.getRetransSegs())
           .build()
         );
-        for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        if (stats != null) {
+          for (Map.Entry<String, Long> entry : stats.entrySet()) {
+            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          }
         }
       }
 
