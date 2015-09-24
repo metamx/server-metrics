@@ -18,6 +18,7 @@ package com.metamx.metrics;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import java.lang.management.BufferPoolMXBean;
@@ -27,10 +28,17 @@ import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.util.Map;
+import org.hyperic.sigar.ProcCpu;
+import org.hyperic.sigar.Sigar;
+import org.hyperic.sigar.SigarException;
 
 public class JvmMonitor extends AbstractMonitor
 {
-  private final KeyedDiff gcDiff = new KeyedDiff();
+  private static final Logger log = new Logger(JvmMonitor.class);
+
+  private final KeyedDiff keyDiff = new KeyedDiff();
+
+  private final Sigar sigar = new Sigar();
 
   private Map<String, String[]> dimensions;
 
@@ -86,10 +94,12 @@ public class JvmMonitor extends AbstractMonitor
 
     // jvm/gc
     for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
-      final Map<String, Long> diff = gcDiff.to(gc.getName(), ImmutableMap.of(
-          "jvm/gc/time",  gc.getCollectionTime(),
-          "jvm/gc/count", gc.getCollectionCount()
-      ));
+      final Map<String, Long> diff = this.keyDiff.to(
+          gc.getName(), ImmutableMap.of(
+              "jvm/gc/time", gc.getCollectionTime(),
+              "jvm/gc/count", gc.getCollectionCount()
+          )
+      );
       if (diff != null) {
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
             .setDimension("gcName", gc.getName());
@@ -112,6 +122,30 @@ public class JvmMonitor extends AbstractMonitor
       emitter.emit(builder.build("jvm/bufferpool/count", pool.getCount()));
     }
 
+    // process CPU
+    try {
+      ProcCpu procCpu = sigar.getProcCpu(sigar.getPid());
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+      // delta for total, sys, user
+      Map<String, Long> procDiff = this.keyDiff.to(
+          "proc/cpu", ImmutableMap.of(
+              "jvm/cpu/total", procCpu.getTotal(),
+              "jvm/cpu/sys", procCpu.getSys(),
+              "jvm/cpu/user", procCpu.getUser()
+          )
+      );
+      if (procDiff != null) {
+        for (Map.Entry<String, Long> entry : procDiff.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        }
+      }
+      emitter.emit(builder.build("jvm/cpu/percent", procCpu.getPercent()));
+    }
+    catch (SigarException e) {
+      log.error(e, "Failed to get ProcCpu");
+    }
     return true;
   }
+
 }
