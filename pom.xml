@@ -108,4 +108,16 @@
         </plugins>
     </build>
 
+    <profiles>
+      <profile>
+        <id>build</id>
+        <repositories>
+          <repository>
+            <id>sigar</id>
+            <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+          </repository>
+        </repositories>
+      </profile>
+    </profiles>
+
 </project>
