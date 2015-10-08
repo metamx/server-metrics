@@ -277,7 +277,7 @@ public class SysMonitor extends AbstractMonitor
             if (fsu != null) {
               final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
                   .put("sys/fs/max", fsu.getTotal() * 1024)
-                  .put("sys/fs/used", fsu.getTotal() * 1024)
+                  .put("sys/fs/used", fsu.getUsed() * 1024)
                   .put("sys/fs/files/count", fsu.getFiles())
                   .put("sys/fs/files/free", fsu.getFreeFiles())
                 .build();
