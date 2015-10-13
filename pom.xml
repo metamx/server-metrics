@@ -69,7 +69,7 @@
         <dependency>
             <groupId>com.metamx</groupId>
             <artifactId>emitter</artifactId>
-            <version>0.3.0</version>
+            <version>0.3.3</version>
         </dependency>
         <dependency>
             <!-- sigar is only required for com.metamx.metrics.SysMonitor
