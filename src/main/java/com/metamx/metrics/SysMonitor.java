@@ -18,15 +18,11 @@ package com.metamx.metrics;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import java.io.File;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +38,6 @@ import org.hyperic.sigar.NetInterfaceStat;
 import org.hyperic.sigar.NetStat;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
-import org.hyperic.sigar.SigarLoader;
 import org.hyperic.sigar.Swap;
 import org.hyperic.sigar.Tcp;
 import org.hyperic.sigar.Uptime;
@@ -51,7 +46,7 @@ public class SysMonitor extends AbstractMonitor
 {
   private static final Logger log = new Logger(SysMonitor.class);
 
-  private final Sigar sigar = new Sigar();
+  private final Sigar sigar = SigarUtil.getSigar();
 
   private final List<String> fsTypeWhitelist = ImmutableList.of("local");
   private final List<String> netAddressBlacklist = ImmutableList.of("0.0.0.0", "127.0.0.1");
@@ -83,30 +78,6 @@ public class SysMonitor extends AbstractMonitor
             new TcpStats()
         )
     );
-  }
-
-  static {
-    SigarLoader loader = new SigarLoader(Sigar.class);
-    try {
-      String libName = loader.getLibraryName();
-
-      URL url = SysMonitor.class.getResource("/" + libName);
-      if (url != null) {
-        File tmpDir = File.createTempFile("yay", "yay");
-        tmpDir.delete();
-        tmpDir.mkdir();
-        File nativeLibTmpFile = new File(tmpDir, libName);
-        nativeLibTmpFile.deleteOnExit();
-        StreamUtils.copyToFileAndClose(url.openStream(), nativeLibTmpFile);
-        log.info("Loading sigar native lib at tmpPath[%s]", nativeLibTmpFile);
-        loader.load(nativeLibTmpFile.getParent());
-      } else {
-        log.info("No native libs found in jar, letting the normal load mechanisms figger it out.");
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public void addDirectoriesToMonitor(String[] dirList)
@@ -276,11 +247,11 @@ public class SysMonitor extends AbstractMonitor
             }
             if (fsu != null) {
               final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
-                  .put("sys/fs/max", fsu.getTotal() * 1024)
-                  .put("sys/fs/used", fsu.getUsed() * 1024)
-                  .put("sys/fs/files/count", fsu.getFiles())
-                  .put("sys/fs/files/free", fsu.getFreeFiles())
-                .build();
+                                                          .put("sys/fs/max", fsu.getTotal() * 1024)
+                                                          .put("sys/fs/used", fsu.getUsed() * 1024)
+                                                          .put("sys/fs/files/count", fsu.getFiles())
+                                                          .put("sys/fs/files/free", fsu.getFreeFiles())
+                                                          .build();
               final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                   .setDimension("fsDevName", fs.getDevName())
                   .setDimension("fsDirName", fs.getDirName())
@@ -329,13 +300,13 @@ public class SysMonitor extends AbstractMonitor
             if (du != null) {
               final Map<String, Long> stats = diff.to(
                   name, ImmutableMap.<String, Long>builder()
-                      .put("sys/disk/read/size", du.getReadBytes())
-                      .put("sys/disk/read/count", du.getReads())
-                      .put("sys/disk/write/size", du.getWriteBytes())
-                      .put("sys/disk/write/count", du.getWrites())
-                      .put("sys/disk/queue", Double.valueOf(du.getQueue()).longValue())
-                      .put("sys/disk/serviceTime", Double.valueOf(du.getServiceTime()).longValue())
-                    .build()
+                                    .put("sys/disk/read/size", du.getReadBytes())
+                                    .put("sys/disk/read/count", du.getReads())
+                                    .put("sys/disk/write/size", du.getWriteBytes())
+                                    .put("sys/disk/write/count", du.getWrites())
+                                    .put("sys/disk/queue", Double.valueOf(du.getQueue()).longValue())
+                                    .put("sys/disk/serviceTime", Double.valueOf(du.getServiceTime()).longValue())
+                                    .build()
               );
               if (stats != null) {
                 final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
@@ -394,19 +365,19 @@ public class SysMonitor extends AbstractMonitor
               if (netstat != null) {
                 final Map<String, Long> stats = diff.to(
                     name, ImmutableMap.<String, Long>builder()
-                      .put("sys/net/read/size", netstat.getRxBytes())
-                      .put("sys/net/read/packets", netstat.getRxPackets())
-                      .put("sys/net/read/errors", netstat.getRxErrors())
-                      .put("sys/net/read/dropped", netstat.getRxDropped())
-                      .put("sys/net/read/overruns", netstat.getRxOverruns())
-                      .put("sys/net/read/frame", netstat.getRxFrame())
-                      .put("sys/net/write/size", netstat.getTxBytes())
-                      .put("sys/net/write/packets", netstat.getTxPackets())
-                      .put("sys/net/write/errors", netstat.getTxErrors())
-                      .put("sys/net/write/dropped", netstat.getTxDropped())
-                      .put("sys/net/write/collisions", netstat.getTxCollisions())
-                      .put("sys/net/write/overruns", netstat.getTxOverruns())
-                    .build()
+                                      .put("sys/net/read/size", netstat.getRxBytes())
+                                      .put("sys/net/read/packets", netstat.getRxPackets())
+                                      .put("sys/net/read/errors", netstat.getRxErrors())
+                                      .put("sys/net/read/dropped", netstat.getRxDropped())
+                                      .put("sys/net/read/overruns", netstat.getRxOverruns())
+                                      .put("sys/net/read/frame", netstat.getRxFrame())
+                                      .put("sys/net/write/size", netstat.getTxBytes())
+                                      .put("sys/net/write/packets", netstat.getTxPackets())
+                                      .put("sys/net/write/errors", netstat.getTxErrors())
+                                      .put("sys/net/write/dropped", netstat.getTxDropped())
+                                      .put("sys/net/write/collisions", netstat.getTxCollisions())
+                                      .put("sys/net/write/overruns", netstat.getTxOverruns())
+                                      .build()
                 );
                 if (stats != null) {
                   final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
@@ -457,7 +428,7 @@ public class SysMonitor extends AbstractMonitor
                   .put("softIrq", cpu.getSoftIrq()) // softIrq = ΔsoftIrq / Δtotal
                   .put("stolen", cpu.getStolen()) // stolen = Δstolen / Δtotal
                   .put("_total", cpu.getTotal()) // (not reported)
-                .build()
+                  .build()
           );
           if (stats != null) {
             final long total = stats.remove("_total");
@@ -493,7 +464,8 @@ public class SysMonitor extends AbstractMonitor
       double[] la = null;
       try {
         la = sigar.getLoadAverage();
-      } catch (SigarException e) {
+      }
+      catch (SigarException e) {
         log.error(e, "Failed to get Load Average");
       }
 
@@ -538,17 +510,18 @@ public class SysMonitor extends AbstractMonitor
       }
 
       if (tcp != null) {
-        final Map<String, Long> stats = diff.to("tcp", ImmutableMap.<String, Long>builder()
-            .put("sys/tcp/activeOpens", tcp.getActiveOpens())
-            .put("sys/tcp/passiveOpens", tcp.getPassiveOpens())
-            .put("sys/tcp/attemptFails", tcp.getAttemptFails())
-            .put("sys/tcp/estabResets", tcp.getEstabResets())
-            .put("sys/tcp/in/segs", tcp.getInSegs())
-            .put("sys/tcp/in/errs", tcp.getInErrs())
-            .put("sys/tcp/out/segs", tcp.getOutSegs())
-            .put("sys/tcp/out/rsts", tcp.getOutRsts())
-            .put("sys/tcp/retrans/segs", tcp.getRetransSegs())
-          .build()
+        final Map<String, Long> stats = diff.to(
+            "tcp", ImmutableMap.<String, Long>builder()
+                               .put("sys/tcp/activeOpens", tcp.getActiveOpens())
+                               .put("sys/tcp/passiveOpens", tcp.getPassiveOpens())
+                               .put("sys/tcp/attemptFails", tcp.getAttemptFails())
+                               .put("sys/tcp/estabResets", tcp.getEstabResets())
+                               .put("sys/tcp/in/segs", tcp.getInSegs())
+                               .put("sys/tcp/in/errs", tcp.getInErrs())
+                               .put("sys/tcp/out/segs", tcp.getOutSegs())
+                               .put("sys/tcp/out/rsts", tcp.getOutRsts())
+                               .put("sys/tcp/retrans/segs", tcp.getRetransSegs())
+                               .build()
         );
         if (stats != null) {
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
@@ -566,24 +539,27 @@ public class SysMonitor extends AbstractMonitor
       }
       if (netStat != null) {
         final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
-            .put("sys/net/inbound", (long) netStat.getAllInboundTotal())
-            .put("sys/net/outbound", (long) netStat.getAllOutboundTotal())
-            .put("sys/tcp/inbound", (long) netStat.getTcpInboundTotal())
-            .put("sys/tcp/outbound", (long) netStat.getTcpOutboundTotal())
-            .put("sys/tcp/state/established", (long) netStat.getTcpEstablished())
-            .put("sys/tcp/state/synSent", (long) netStat.getTcpSynSent())
-            .put("sys/tcp/state/synRecv", (long) netStat.getTcpSynRecv())
-            .put("sys/tcp/state/finWait1", (long) netStat.getTcpFinWait1())
-            .put("sys/tcp/state/finWait2", (long) netStat.getTcpFinWait2())
-            .put("sys/tcp/state/timeWait", (long) netStat.getTcpTimeWait())
-            .put("sys/tcp/state/close", (long) netStat.getTcpClose())
-            .put("sys/tcp/state/closeWait", (long) netStat.getTcpCloseWait())
-            .put("sys/tcp/state/lastAck", (long) netStat.getTcpLastAck())
-            .put("sys/tcp/state/listen", (long) netStat.getTcpListen())
-            .put("sys/tcp/state/closing", (long) netStat.getTcpClosing())
-            .put("sys/tcp/state/idle", (long) netStat.getTcpIdle())
-            .put("sys/tcp/state/bound", (long) netStat.getTcpBound())
-          .build();
+                                                    .put("sys/net/inbound", (long) netStat.getAllInboundTotal())
+                                                    .put("sys/net/outbound", (long) netStat.getAllOutboundTotal())
+                                                    .put("sys/tcp/inbound", (long) netStat.getTcpInboundTotal())
+                                                    .put("sys/tcp/outbound", (long) netStat.getTcpOutboundTotal())
+                                                    .put(
+                                                        "sys/tcp/state/established",
+                                                        (long) netStat.getTcpEstablished()
+                                                    )
+                                                    .put("sys/tcp/state/synSent", (long) netStat.getTcpSynSent())
+                                                    .put("sys/tcp/state/synRecv", (long) netStat.getTcpSynRecv())
+                                                    .put("sys/tcp/state/finWait1", (long) netStat.getTcpFinWait1())
+                                                    .put("sys/tcp/state/finWait2", (long) netStat.getTcpFinWait2())
+                                                    .put("sys/tcp/state/timeWait", (long) netStat.getTcpTimeWait())
+                                                    .put("sys/tcp/state/close", (long) netStat.getTcpClose())
+                                                    .put("sys/tcp/state/closeWait", (long) netStat.getTcpCloseWait())
+                                                    .put("sys/tcp/state/lastAck", (long) netStat.getTcpLastAck())
+                                                    .put("sys/tcp/state/listen", (long) netStat.getTcpListen())
+                                                    .put("sys/tcp/state/closing", (long) netStat.getTcpClosing())
+                                                    .put("sys/tcp/state/idle", (long) netStat.getTcpIdle())
+                                                    .put("sys/tcp/state/bound", (long) netStat.getTcpBound())
+                                                    .build();
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
