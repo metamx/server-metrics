@@ -31,7 +31,7 @@ public class JvmCpuMonitor extends AbstractMonitor
 {
   private static final Logger log = new Logger(JvmCpuMonitor.class);
 
-  private final Sigar sigar = new Sigar();
+  private final Sigar sigar = SigarUtil.getSigar();
 
   private final KeyedDiff diff = new KeyedDiff();
 
