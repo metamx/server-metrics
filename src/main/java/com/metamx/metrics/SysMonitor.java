@@ -298,6 +298,7 @@ public class SysMonitor extends AbstractMonitor
               log.error(e, "Failed to get DiskUsage[%s]", name);
             }
             if (du != null) {
+              log.debug("Got DiskUsage for [%s]: %s", name, du);
               final Map<String, Long> stats = diff.to(
                   name, ImmutableMap.<String, Long>builder()
                                     .put("sys/disk/read/size", du.getReadBytes())
@@ -308,6 +309,7 @@ public class SysMonitor extends AbstractMonitor
                                     .put("sys/disk/serviceTime", Double.valueOf(du.getServiceTime()).longValue())
                                     .build()
               );
+              log.debug("DiskUsage diff for [%s]: %s", name, stats);
               if (stats != null) {
                 final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                     .setDimension("fsDevName", fs.getDevName())
