@@ -65,6 +65,8 @@ public class SysMonitor extends AbstractMonitor
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
 
+    sigar.enableLogging(true);
+
     this.statsList = new ArrayList<Stats>();
     this.statsList.addAll(
         Arrays.asList(
@@ -288,7 +290,9 @@ public class SysMonitor extends AbstractMonitor
       if (fss != null) {
         log.debug("Found FileSystem list: [%s]", Joiner.on(", ").join(fss));
         for (FileSystem fs : fss) {
-          final String name = fs.getDevName(); // (fs.getDirName() appears to give the same results here)
+          // fs.getDevName() appears to give the same results here, but on some nodes results for one disc were substituted by another
+          // LOG: Sigar - /proc/diskstats /dev/xvdj -> /dev/xvdb [202,16]
+          final String name = fs.getDirName();
           if (fsTypeWhitelist.contains(fs.getTypeName())) {
             DiskUsage du = null;
             try {
@@ -308,6 +312,7 @@ public class SysMonitor extends AbstractMonitor
                                     .put("sys/disk/serviceTime", Double.valueOf(du.getServiceTime()).longValue())
                                     .build()
               );
+              log.debug("DiskUsage diff for [%s]: %s", name, stats);
               if (stats != null) {
                 final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
                     .setDimension("fsDevName", fs.getDevName())
