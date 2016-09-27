@@ -58,9 +58,20 @@ public class SigarUtil
     }
   }
 
+  /**
+   * SigarHolder class is initialized after SigarUtil, that guarantees that SIGAR = new Sigar() is executed after static
+   * block (which loads the library) of SigarUtil is executed. This is anyway guaranteed by JLS if SIGAR static field
+   * goes below the static block in textual order, but fragile e. g. if someone applies automatic reformatting and the
+   * static field is moved above the static block.
+   */
+  private static class SigarHolder
+  {
+    private static final Sigar SIGAR = new Sigar();
+  }
+
   public static Sigar getSigar()
   {
-    return new Sigar();
+    return SigarHolder.SIGAR;
   }
 
 }
