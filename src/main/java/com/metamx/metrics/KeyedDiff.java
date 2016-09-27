@@ -41,7 +41,7 @@ public class KeyedDiff
 
   public static Map<String, Long> subtract(Map<String, Long> xs, Map<String, Long> ys)
   {
-    assert xs.keySet() == ys.keySet();
+    assert xs.keySet().equals(ys.keySet());
     final Map<String, Long> zs = new HashMap<String, Long>();
     for (String k : xs.keySet()) {
       zs.put(k, xs.get(k) - ys.get(k));
