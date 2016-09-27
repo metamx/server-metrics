@@ -80,6 +80,11 @@
             <version>1.6.5.132</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.gridkit.lab</groupId>
+            <artifactId>jvm-attach-api</artifactId>
+            <version>1.2</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

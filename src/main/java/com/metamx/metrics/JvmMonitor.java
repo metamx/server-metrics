@@ -20,8 +20,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import org.gridkit.lab.jvm.perfdata.JStatData;
+import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
+import org.gridkit.lab.jvm.perfdata.JStatData.TickCounter;
+import org.hyperic.sigar.Sigar;
+
 import java.lang.management.BufferPoolMXBean;
-import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryType;
@@ -30,8 +34,27 @@ import java.util.Map;
 
 public class JvmMonitor extends AbstractMonitor
 {
-  private final KeyedDiff gcDiff = new KeyedDiff();
+  private final Sigar sigar = SigarUtil.getSigar();
+  /**
+   * The following code is partially based on
+   * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
+   * sjk-core/src/main/java/org/gridkit/jvmtool/PerfCounterGcCpuUsageMonitor.java
+   *
+   * Names of counters could also be seen at
+   * http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/be698ac28848/
+   * src/share/classes/sun/tools/jstat/resources/jstat_options
+   */
+  private final JStatData jStatData = JStatData.connect(sigar.getPid());
+  private final TickCounter youngGcCpu =
+          (TickCounter) jStatData.getAllCounters().get("sun.gc.collector.0.time");
+  private final LongCounter youngGcInvocations =
+          (LongCounter) jStatData.getAllCounters().get("sun.gc.collector.0.invocations");
+  private final TickCounter oldGcCpu =
+          (TickCounter) jStatData.getAllCounters().get("sun.gc.collector.1.time");
+  private final LongCounter oldGcInvocations =
+          (LongCounter) jStatData.getAllCounters().get("sun.gc.collector.1.invocations");
 
+  private Map<String, Long> lastGcCounters = null;
   private Map<String, String[]> dimensions;
 
   public JvmMonitor()
@@ -84,22 +107,7 @@ public class JvmMonitor extends AbstractMonitor
       emitter.emit(builder.build("jvm/pool/init",      usage.getInit()));
     }
 
-    // jvm/gc
-    for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
-      final Map<String, Long> diff = gcDiff.to(gc.getName(), ImmutableMap.of(
-          "jvm/gc/time",  gc.getCollectionTime(),
-          "jvm/gc/count", gc.getCollectionCount()
-      ));
-      if (diff != null) {
-        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-            .setDimension("gcName", gc.getName());
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-
-        for (Map.Entry<String, Long> entry : diff.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
-        }
-      }
-    }
+    emitGcMetrics(emitter);
 
     // direct memory usage
     for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
@@ -113,5 +121,29 @@ public class JvmMonitor extends AbstractMonitor
     }
 
     return true;
+  }
+
+  private void emitGcMetrics(ServiceEmitter emitter)
+  {
+    ImmutableMap<String, Long> newGcCounters = ImmutableMap.of(
+      "jvm/gc/young/cpu", youngGcCpu.getNanos(),
+      "jvm/gc/young/count", youngGcInvocations.getLong(),
+      "jvm/gc/old/cpu", oldGcCpu.getNanos(),
+      "jvm/gc/old/count", oldGcInvocations.getLong()
+    );
+
+    final Map<String, Long> diff;
+    if (lastGcCounters != null) {
+      diff = KeyedDiff.subtract(newGcCounters, lastGcCounters);
+    } else {
+      diff = newGcCounters;
+    }
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
+    for (Map.Entry<String, Long> entry : diff.entrySet()) {
+      emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+    }
+    lastGcCounters = newGcCounters;
   }
 }
