@@ -44,7 +44,7 @@ public class JvmMonitor extends AbstractMonitor
   private final LongCounter oldGcInvocations;
 
   {
-    long currentProcessId = SigarUtil.getSigar().getPid();
+    long currentProcessId = SigarUtil.getCurrentProcessId();
     // connect to itself
     JStatData jStatData = JStatData.connect(currentProcessId);
     Map<String, JStatData.Counter<?>> jStatCounters = jStatData.getAllCounters();
