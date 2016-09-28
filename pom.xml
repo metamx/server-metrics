@@ -98,7 +98,7 @@
           <artifactId>sigar-dist</artifactId>
           <version>1.6.5.132</version>
           <type>zip</type>
-          <scope>test</scope>
+          <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -118,8 +118,8 @@
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>unpack-sigar</id>
-                        <phase>test-compile</phase>
+                        <id>copy-sigar-lib-to-resources</id>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>unpack-dependencies</goal>
                         </goals>
@@ -153,6 +153,14 @@
                 <artifactId>maven-release-plugin</artifactId>
             </plugin>
         </plugins>
+
+        <resources>
+            <resource>
+                <directory>
+                    ${project.build.directory}/hyperic-sigar-1.6.5/sigar-bin/lib
+                </directory>
+            </resource>
+        </resources>
     </build>
 
     <profiles>
