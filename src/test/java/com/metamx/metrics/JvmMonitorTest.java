@@ -91,22 +91,21 @@ public class JvmMonitorTest
 
     boolean gcSeen()
     {
-      boolean gcSeen = false;
-      if (oldGcCount != null && oldGcCount.longValue() > 0) {
-        gcSeen = true;
-        String message = "expected to see positive old gc cpu after some gc count";
-        Assert.assertNotNull(message, oldGcCpu);
-        Assert.assertTrue(message, Long.parseLong(oldGcCpu.toString()) > 0);
-        System.out.println("old: " + oldGcCount + " " + oldGcCpu);
-      }
-      if (youngGcCount != null && youngGcCount.longValue() > 0) {
-        gcSeen = true;
-        String message = "expected to see positive young gc cpu after some gc count";
-        Assert.assertNotNull(message, youngGcCpu);
-        Assert.assertTrue(message, Long.parseLong(youngGcCpu.toString()) > 0);
-        System.out.println("young: " + youngGcCount + " " + youngGcCpu);
-      }
-      return gcSeen;
+      boolean oldGcCountSeen = oldGcCount != null && oldGcCount.longValue() > 0;
+      boolean oldGcCpuSeen = oldGcCpu != null && oldGcCpu.longValue() > 0;
+      System.out.println("old count: " + oldGcCount + ", cpu: " + oldGcCpu);
+      Assert.assertFalse(
+          "expected to see old gc count and cpu both zero or non-existent or both positive",
+          oldGcCountSeen ^ oldGcCpuSeen
+      );
+      boolean youngGcCountSeen = youngGcCount != null && youngGcCount.longValue() > 0;
+      boolean youngGcCpuSeen = youngGcCpu != null && youngGcCpu.longValue() > 0;
+      System.out.println("young count: " + youngGcCount + ", cpu: " + youngGcCpu);
+      Assert.assertFalse(
+          "expected to see young gc count and cpu both zero/non-existent or both positive",
+          youngGcCountSeen ^ youngGcCpuSeen
+      );
+      return oldGcCountSeen || youngGcCountSeen;
     }
 
     @Override
