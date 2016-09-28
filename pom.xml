@@ -60,6 +60,10 @@
         <tag>HEAD</tag>
     </scm>
 
+    <properties>
+        <sigar.version>1.6.5.132</sigar.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.metamx</groupId>
@@ -77,8 +81,15 @@
                  https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/ -->
             <groupId>org.hyperic</groupId>
             <artifactId>sigar</artifactId>
-            <version>1.6.5.132</version>
+            <version>${sigar.version}</version>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.hyperic</groupId>
+            <artifactId>sigar-dist</artifactId>
+            <version>${sigar.version}</version>
+            <type>zip</type>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.gridkit.lab</groupId>
@@ -98,13 +109,6 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.12</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.hyperic</groupId>
-          <artifactId>sigar-dist</artifactId>
-          <version>1.6.5.132</version>
-          <type>zip</type>
-          <scope>provided</scope>
         </dependency>
     </dependencies>
 
