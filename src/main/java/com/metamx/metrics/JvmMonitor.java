@@ -23,7 +23,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import org.gridkit.lab.jvm.perfdata.JStatData;
 import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
 import org.gridkit.lab.jvm.perfdata.JStatData.TickCounter;
-import org.hyperic.sigar.Sigar;
 
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
@@ -34,25 +33,31 @@ import java.util.Map;
 
 public class JvmMonitor extends AbstractMonitor
 {
-  private final Sigar sigar = SigarUtil.getSigar();
   /**
    * The following code is partially based on
    * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
    * sjk-core/src/main/java/org/gridkit/jvmtool/PerfCounterGcCpuUsageMonitor.java
-   *
-   * Names of counters could also be seen at
-   * http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/be698ac28848/
-   * src/share/classes/sun/tools/jstat/resources/jstat_options
    */
-  private final JStatData jStatData = JStatData.connect(sigar.getPid());
-  private final TickCounter youngGcCpu =
-          (TickCounter) jStatData.getAllCounters().get("sun.gc.collector.0.time");
-  private final LongCounter youngGcInvocations =
-          (LongCounter) jStatData.getAllCounters().get("sun.gc.collector.0.invocations");
-  private final TickCounter oldGcCpu =
-          (TickCounter) jStatData.getAllCounters().get("sun.gc.collector.1.time");
-  private final LongCounter oldGcInvocations =
-          (LongCounter) jStatData.getAllCounters().get("sun.gc.collector.1.invocations");
+  private final TickCounter youngGcCpu;
+  private final LongCounter youngGcInvocations;
+  private final TickCounter oldGcCpu;
+  private final LongCounter oldGcInvocations;
+
+  {
+    long currentProcessId = SigarUtil.getSigar().getPid();
+    // connect to itself
+    JStatData jStatData = JStatData.connect(currentProcessId);
+    Map<String, JStatData.Counter<?>> jStatCounters = jStatData.getAllCounters();
+    // Names of counters could also be found at
+    // http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/be698ac28848/
+    // src/share/classes/sun/tools/jstat/resources/jstat_options
+    youngGcCpu = (TickCounter) jStatCounters.get("sun.gc.collector.0.time");
+    youngGcInvocations = (LongCounter) jStatCounters.get("sun.gc.collector.0.invocations");
+    oldGcCpu = (TickCounter) jStatCounters.get("sun.gc.collector.1.time");
+    oldGcInvocations = (LongCounter) jStatCounters.get("sun.gc.collector.1.invocations");
+  }
+
+
 
   private Map<String, Long> lastGcCounters = null;
   private Map<String, String[]> dimensions;
