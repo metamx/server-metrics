@@ -45,7 +45,7 @@ public class JvmMonitorTest
       jvmMonitor.doMonitor(serviceEmitter);
       if (emitter.gcSeen())
         return;
-      Thread.sleep(100);
+      Thread.sleep(10);
     }
   }
 
