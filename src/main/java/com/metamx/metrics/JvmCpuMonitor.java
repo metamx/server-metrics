@@ -32,6 +32,7 @@ public class JvmCpuMonitor extends AbstractMonitor
   private static final Logger log = new Logger(JvmCpuMonitor.class);
 
   private final Sigar sigar = SigarUtil.getSigar();
+  private final long currentProcessId = sigar.getPid();
 
   private final KeyedDiff diff = new KeyedDiff();
 
@@ -53,7 +54,7 @@ public class JvmCpuMonitor extends AbstractMonitor
   {
     // process CPU
     try {
-      ProcCpu procCpu = sigar.getProcCpu(sigar.getPid());
+      ProcCpu procCpu = sigar.getProcCpu(currentProcessId);
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       // delta for total, sys, user
