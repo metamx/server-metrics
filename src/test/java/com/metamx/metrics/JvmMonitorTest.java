@@ -29,7 +29,7 @@ public class JvmMonitorTest
 {
 
   @Test(timeout = 5000)
-  public void testGcCounts()
+  public void testGcCounts() throws InterruptedException
   {
     GcTrackingEmitter emitter = new GcTrackingEmitter();
 
@@ -40,11 +40,12 @@ public class JvmMonitorTest
     while (true) {
       // generate some garbage to see gc counters incremented
       @SuppressWarnings("unused")
-      byte[] b = new byte[1024 * 1024 * 1024];
+      byte[] b = new byte[1024 * 1024 * 50];
       emitter.reset();
       jvmMonitor.doMonitor(serviceEmitter);
       if (emitter.gcSeen())
         return;
+      Thread.sleep(100);
     }
   }
 
@@ -91,21 +92,35 @@ public class JvmMonitorTest
 
     boolean gcSeen()
     {
+      return oldGcSeen() || youngGcSeen();
+    }
+
+    private boolean oldGcSeen()
+    {
       boolean oldGcCountSeen = oldGcCount != null && oldGcCount.longValue() > 0;
       boolean oldGcCpuSeen = oldGcCpu != null && oldGcCpu.longValue() > 0;
-      System.out.println("old count: " + oldGcCount + ", cpu: " + oldGcCpu);
+      if (oldGcCountSeen || oldGcCpuSeen) {
+        System.out.println("old count: " + oldGcCount + ", cpu: " + oldGcCpu);
+      }
       Assert.assertFalse(
           "expected to see old gc count and cpu both zero or non-existent or both positive",
           oldGcCountSeen ^ oldGcCpuSeen
       );
+      return oldGcCountSeen;
+    }
+
+    private boolean youngGcSeen()
+    {
       boolean youngGcCountSeen = youngGcCount != null && youngGcCount.longValue() > 0;
       boolean youngGcCpuSeen = youngGcCpu != null && youngGcCpu.longValue() > 0;
-      System.out.println("young count: " + youngGcCount + ", cpu: " + youngGcCpu);
+      if (youngGcCountSeen || youngGcCpuSeen) {
+        System.out.println("young count: " + youngGcCount + ", cpu: " + youngGcCpu);
+      }
       Assert.assertFalse(
           "expected to see young gc count and cpu both zero/non-existent or both positive",
           youngGcCountSeen ^ youngGcCpuSeen
       );
-      return oldGcCountSeen || youngGcCountSeen;
+      return youngGcCountSeen;
     }
 
     @Override
