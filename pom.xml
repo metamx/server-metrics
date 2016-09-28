@@ -61,7 +61,8 @@
     </scm>
 
     <properties>
-        <sigar.version>1.6.5.132</sigar.version>
+        <sigar.base.version>1.6.5</sigar.base.version>
+        <sigar.version>${sigar.base.version}.132</sigar.version>
     </properties>
 
     <dependencies>
@@ -153,7 +154,7 @@
                     <systemProperties>
                         <property>
                             <name>java.library.path</name>
-                            <value>${project.build.directory}/hyperic-sigar-1.6.5/sigar-bin/lib/</value>
+                            <value>${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib/</value>
                         </property>
                     </systemProperties>
                 </configuration>
@@ -167,7 +168,7 @@
         <resources>
             <resource>
                 <directory>
-                    ${project.build.directory}/hyperic-sigar-1.6.5/sigar-bin/lib
+                    ${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib
                 </directory>
             </resource>
         </resources>
