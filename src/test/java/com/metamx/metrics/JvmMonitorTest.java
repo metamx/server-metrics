@@ -74,17 +74,17 @@ public class JvmMonitorTest
     public void emit(Event e)
     {
       ServiceMetricEvent event = (ServiceMetricEvent) e;
-      switch (event.getMetric()) {
-        case "jvm/gc/old/count":
+      switch (event.getMetric() + "/" + event.toMap().get("gcGen")) {
+        case "jvm/gc/count/old":
           oldGcCount = event.getValue();
           break;
-        case "jvm/gc/old/cpu":
+        case "jvm/gc/cpu/old":
           oldGcCpu = event.getValue();
           break;
-        case "jvm/gc/young/count":
+        case "jvm/gc/count/young":
           youngGcCount = event.getValue();
           break;
-        case "jvm/gc/young/cpu":
+        case "jvm/gc/cpu/young":
           youngGcCpu = event.getValue();
           break;
       }
