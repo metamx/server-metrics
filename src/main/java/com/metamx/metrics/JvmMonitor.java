@@ -22,6 +22,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import org.gridkit.lab.jvm.perfdata.JStatData;
 import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
+import org.gridkit.lab.jvm.perfdata.JStatData.StringCounter;
 import org.gridkit.lab.jvm.perfdata.JStatData.TickCounter;
 
 import java.lang.management.BufferPoolMXBean;
@@ -33,7 +34,7 @@ import java.util.Map;
 
 public class JvmMonitor extends AbstractMonitor
 {
-  /**
+  /*
    * The following GC-related code is partially based on
    * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
    * sjk-core/src/main/java/org/gridkit/jvmtool/PerfCounterGcCpuUsageMonitor.java
@@ -41,16 +42,49 @@ public class JvmMonitor extends AbstractMonitor
 
   private enum GcGeneration
   {
-    YOUNG(GarbageCollectors.youngName(), 0), OLD(GarbageCollectors.oldName(), 1);
+    YOUNG(0) {
+      @Override
+      String readableGcName(String name)
+      {
+        if (name.contains("Copy")) {
+          return "copy";
+        } else if (name.contains("Scavenge")) {
+          return "scavenge";
+        } else if (name.contains("ParNew")) {
+          return "parNew";
+        } else if (name.contains("G1")) {
+          return "g1";
+        } else {
+          return name;
+        }
+      }
+    },
+    OLD(1) {
+      @Override
+      String readableGcName(String name)
+      {
+        if (name.contains("MarkSweepCompact")) {
+          return "serial";
+        } else if (name.contains("PS MarkSweep")) {
+          return "parallel";
+        } else if (name.contains("ConcurrentMarkSweep")) {
+          return "cms";
+        } else if (name.contains("G1")) {
+          return "g1";
+        } else {
+          return name;
+        }
+      }
+    };
 
-    final String algorithmName;
     final int jStatOrder;
 
-    GcGeneration(String algorithmName, int jStatOrder)
+    GcGeneration(int jStatOrder)
     {
-      this.algorithmName = algorithmName;
       this.jStatOrder = jStatOrder;
     }
+
+    abstract String readableGcName(String name);
   }
 
   private static class GcCounters
@@ -58,6 +92,7 @@ public class JvmMonitor extends AbstractMonitor
     final GcGeneration generation;
     final LongCounter invocations;
     final TickCounter cpu;
+    final String readableGcName;
     long lastInvocations = 0;
     long lastCpuNanos = 0;
 
@@ -70,12 +105,17 @@ public class JvmMonitor extends AbstractMonitor
       // src/share/classes/sun/tools/jstat/resources/jstat_options
       invocations = (LongCounter) jStatCounters.get(String.format("sun.gc.collector.%d.invocations", jStatOrder));
       cpu = (TickCounter) jStatCounters.get(String.format("sun.gc.collector.%d.time", jStatOrder));
+      String gcName = ((StringCounter) jStatCounters.get(String.format(
+          "sun.gc.collector.%d.name",
+          jStatOrder
+      ))).getString();
+      readableGcName = generation.readableGcName(gcName);
     }
 
     void emitCounters(ServiceEmitter emitter, ServiceMetricEvent.Builder metricBuilder)
     {
       metricBuilder.setDimension("gcGen", generation.name().toLowerCase());
-      metricBuilder.setDimension("gcName", generation.algorithmName);
+      metricBuilder.setDimension("gcName", readableGcName);
       emitInvocations(emitter, metricBuilder);
       emitCpu(emitter, metricBuilder);
     }

@@ -43,8 +43,9 @@ public class JvmMonitorTest
       byte[] b = new byte[1024 * 1024 * 50];
       emitter.reset();
       jvmMonitor.doMonitor(serviceEmitter);
-      if (emitter.gcSeen())
+      if (emitter.gcSeen()) {
         return;
+      }
       Thread.sleep(10);
     }
   }
