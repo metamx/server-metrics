@@ -16,6 +16,8 @@
 
 package com.metamx.metrics;
 
+import org.gridkit.lab.jvm.perfdata.JStatData;
+
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;
@@ -25,9 +27,8 @@ public class GcNameTest
 
   public static void main(String[] args)
   {
-    List<GarbageCollectorMXBean> gcMXBeans = ManagementFactory.getPlatformMXBeans(GarbageCollectorMXBean.class);
-    for (GarbageCollectorMXBean gcMXBean : gcMXBeans) {
-      System.out.println(gcMXBean.getName());
-    }
+    JStatData jStatData = JStatData.connect(SigarUtil.getCurrentProcessId());
+    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.0.name").getValue());
+    System.out.println(jStatData.getAllCounters().get("sun.gc.collector.1.name").getValue());
   }
 }

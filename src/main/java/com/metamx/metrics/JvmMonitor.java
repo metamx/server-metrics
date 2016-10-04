@@ -46,11 +46,11 @@ public class JvmMonitor extends AbstractMonitor
       @Override
       String readableGcName(String name)
       {
-        if (name.contains("Copy")) {
+        if (name.equals("Copy")) {
           return "copy";
         } else if (name.contains("Scavenge")) {
           return "scavenge";
-        } else if (name.contains("ParNew")) {
+        } else if (name.equals("PCopy")) {
           return "parNew";
         } else if (name.contains("G1")) {
           return "g1";
@@ -63,11 +63,11 @@ public class JvmMonitor extends AbstractMonitor
       @Override
       String readableGcName(String name)
       {
-        if (name.contains("MarkSweepCompact")) {
+        if (name.contains("MCS")) { // Mark Sweep Compact
           return "serial";
-        } else if (name.contains("PS MarkSweep")) {
+        } else if (name.contains("PSParallelCompact")) {
           return "parallel";
-        } else if (name.contains("ConcurrentMarkSweep")) {
+        } else if (name.contains("CMS")) {
           return "cms";
         } else if (name.contains("G1")) {
           return "g1";
