@@ -46,16 +46,12 @@ public class JvmMonitor extends AbstractMonitor
       @Override
       String readableGcName(String name)
       {
-        if (name.equals("Copy")) {
-          return "serial";
-        } else if (name.contains("Scavenge")) {
-          return "parallel";
-        } else if (name.equals("PCopy")) {
-          return "cms";
-        } else if (name.contains("G1")) {
-          return "g1";
-        } else {
-          return name;
+        switch (name) {
+          case "Copy": return "serial";
+          case "PSScavenge": return "parallel";
+          case "PCopy": return "cms";
+          case "G1 incremental collections": return "g1";
+          default: return name;
         }
       }
     },
@@ -63,16 +59,12 @@ public class JvmMonitor extends AbstractMonitor
       @Override
       String readableGcName(String name)
       {
-        if (name.contains("MCS")) { // Mark Sweep Compact
-          return "serial";
-        } else if (name.contains("PSParallelCompact")) {
-          return "parallel";
-        } else if (name.contains("CMS")) {
-          return "cms";
-        } else if (name.contains("G1")) {
-          return "g1";
-        } else {
-          return name;
+        switch (name) {
+          case "MCS": return "serial";
+          case "PSParallelCompact": return "parallel";
+          case "CMS": return "cms";
+          case "G1 stop-the-world full collections": return "g1";
+          default: return name;
         }
       }
     };
