@@ -47,11 +47,11 @@ public class JvmMonitor extends AbstractMonitor
       String readableGcName(String name)
       {
         if (name.equals("Copy")) {
-          return "copy";
+          return "serial";
         } else if (name.contains("Scavenge")) {
-          return "scavenge";
+          return "parallel";
         } else if (name.equals("PCopy")) {
-          return "parNew";
+          return "cms";
         } else if (name.contains("G1")) {
           return "g1";
         } else {
