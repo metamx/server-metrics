@@ -19,15 +19,15 @@ package com.metamx.metrics;
 import com.google.common.base.Throwables;
 import com.metamx.common.StreamUtils;
 import com.metamx.common.logger.Logger;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-
 import org.hyperic.jni.ArchLoaderException;
 import org.hyperic.jni.ArchNotSupportedException;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarLoader;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
 
 public class SigarUtil
 {
@@ -39,12 +39,12 @@ public class SigarUtil
     try {
       String libName = loader.getLibraryName();
 
-      URL url = SysMonitor.class.getResource("/" + libName);
+      final URL url = SysMonitor.class.getResource("/" + libName);
       if (url != null) {
-        File tmpDir = File.createTempFile("yay", "yay");
-        tmpDir.delete();
-        tmpDir.mkdir();
-        File nativeLibTmpFile = new File(tmpDir, libName);
+        final File tmpDir = Files.createTempDirectory("sigar").toFile();
+        // As per java.io.DeleteOnExitHook.runHooks() deletion order is reversed from registration order
+        tmpDir.deleteOnExit();
+        final File nativeLibTmpFile = new File(tmpDir, libName);
         nativeLibTmpFile.deleteOnExit();
         StreamUtils.copyToFileAndClose(url.openStream(), nativeLibTmpFile);
         log.info("Loading sigar native lib at tmpPath[%s]", nativeLibTmpFile);
