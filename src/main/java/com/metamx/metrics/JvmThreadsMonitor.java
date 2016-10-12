@@ -43,10 +43,12 @@ public class JvmThreadsMonitor extends AbstractMonitor
     long startedThreadsDiff = newStartedThreads - lastStartedThreads;
 
     emitter.emit(builder.build("jvm/threads/daemon", threadBean.getDaemonThreadCount()));
-    emitter.emit(builder.build("jvm/threads/peak", threadBean.getPeakThreadCount()));
+    emitter.emit(builder.build("jvm/threads/livePeak", threadBean.getPeakThreadCount()));
     emitter.emit(builder.build("jvm/threads/live", newLiveThreads));
     emitter.emit(builder.build("jvm/threads/started", startedThreadsDiff));
     emitter.emit(builder.build("jvm/threads/finished", lastLiveThreads + startedThreadsDiff - newLiveThreads));
+
+    threadBean.resetPeakThreadCount();
 
     lastStartedThreads = newStartedThreads;
     lastLiveThreads = newLiveThreads;
