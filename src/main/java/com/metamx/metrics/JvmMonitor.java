@@ -125,7 +125,7 @@ public class JvmMonitor extends AbstractMonitor
    */
   private static class GcCounters
   {
-    private List<GcGeneration> generations = new ArrayList<>();
+    private final List<GcGeneration> generations = new ArrayList<>();
 
     GcCounters()
     {
@@ -153,41 +153,42 @@ public class JvmMonitor extends AbstractMonitor
   private static class GcGeneration
   {
     private final String name;
-    private GcGenerationCollector collector = null;
-    private List<GcGenerationSpace> spaces = new ArrayList<>();
+    private final GcGenerationCollector collector;
+    private final List<GcGenerationSpace> spaces = new ArrayList<>();
 
     GcGeneration(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String name)
     {
       this.name = name.toLowerCase();
 
-      long spacesCount = ((JStatData.LongCounter) jStatCounters.get(String.format(
-          "sun.gc.generation.%d.spaces",
-          genIndex
-      ))).getLong();
+      long spacesCount = ((JStatData.LongCounter) jStatCounters.get(
+          String.format("sun.gc.generation.%d.spaces", genIndex)
+      )).getLong();
       for (long spaceIndex = 0; spaceIndex < spacesCount; spaceIndex++) {
         spaces.add(new GcGenerationSpace(jStatCounters, genIndex, spaceIndex));
       }
 
       if (jStatCounters.containsKey(String.format("sun.gc.collector.%d.name", genIndex))) {
         collector = new GcGenerationCollector(jStatCounters, genIndex);
+      } else {
+        collector = null;
       }
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      Map<String, String[]> dimensionsCopy = ImmutableMap
+      ImmutableMap.Builder<String, String[]> dimensionsCopyBuilder = ImmutableMap
           .<String, String[]>builder()
           .putAll(dimensions)
-          .put("gcGen", new String[]{name})
-          .build();
+          .put("gcGen", new String[]{name});
+
+      if (collector != null) {
+        dimensionsCopyBuilder.put("gcName", new String[]{collector.name});
+      }
+
+      Map<String, String[]> dimensionsCopy = dimensionsCopyBuilder.build();
 
       if (collector != null) {
         collector.emit(emitter, dimensionsCopy);
-        dimensionsCopy = ImmutableMap
-            .<String, String[]>builder()
-            .putAll(dimensionsCopy)
-            .put("gcName", new String[]{collector.name})
-            .build();
       }
 
       for (GcGenerationSpace space : spaces) {
@@ -220,8 +221,6 @@ public class JvmMonitor extends AbstractMonitor
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-
-      builder.setDimension("gcName", name);
 
       long newInvocations = invocationsCounter.getLong();
       emitter.emit(builder.build("jvm/gc/count", newInvocations - lastInvocations));
@@ -265,10 +264,10 @@ public class JvmMonitor extends AbstractMonitor
   {
     private final String name;
 
-    private LongCounter maxCounter;
-    private LongCounter capacityCounter;
-    private LongCounter usedCounter;
-    private LongCounter initCounter;
+    private final LongCounter maxCounter;
+    private final LongCounter capacityCounter;
+    private final LongCounter usedCounter;
+    private final LongCounter initCounter;
 
     GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex)
     {
