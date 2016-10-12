@@ -4,6 +4,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+import java.util.List;
 import java.util.Map;
 import org.gridkit.lab.jvm.perfdata.JStatData;
 import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
@@ -11,11 +14,8 @@ import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
 public class JvmThreadsMonitor extends AbstractMonitor
 {
   private final Map<String, String[]> dimensions;
-  private final LongCounter deamonCounter;
-  private final LongCounter liveCounter;
-  private final LongCounter livePeakCounter;
-  private final LongCounter startedCounter;
 
+  private int lastLiveThreads = 0;
   private long lastStartedThreads = 0;
 
   public JvmThreadsMonitor()
@@ -27,31 +27,29 @@ public class JvmThreadsMonitor extends AbstractMonitor
   {
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
-
-    long currentProcessId = SigarUtil.getCurrentProcessId();
-    // connect to itself
-    JStatData jStatData = JStatData.connect(currentProcessId);
-    Map<String, JStatData.Counter<?>> jStatCounters = jStatData.getAllCounters();
-
-    deamonCounter = (LongCounter) jStatCounters.get("java.threads.daemon");
-    liveCounter = (LongCounter) jStatCounters.get("java.threads.live");
-    livePeakCounter = (LongCounter) jStatCounters.get("java.threads.livePeak");
-    startedCounter = (LongCounter) jStatCounters.get("java.threads.started");
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
-    emitter.emit(builder.build("jvm/threads/daemon", deamonCounter.getLong()));
-    emitter.emit(builder.build("jvm/threads/live", liveCounter.getLong()));
-    emitter.emit(builder.build("jvm/threads/livePeak", livePeakCounter.getLong()));
+    int newLiveThreads = threadBean.getThreadCount();
+    long newStartedThreads = threadBean.getTotalStartedThreadCount();
 
-    long newStartedThreads = startedCounter.getLong();
-    emitter.emit(builder.build("jvm/threads/started", newStartedThreads - lastStartedThreads));
+    long startedThreadsDiff = newStartedThreads - lastStartedThreads;
+
+    emitter.emit(builder.build("jvm/threads/daemon", threadBean.getDaemonThreadCount()));
+    emitter.emit(builder.build("jvm/threads/peak", threadBean.getPeakThreadCount()));
+    emitter.emit(builder.build("jvm/threads/live", newLiveThreads));
+    emitter.emit(builder.build("jvm/threads/started", startedThreadsDiff));
+    emitter.emit(builder.build("jvm/threads/finished", lastLiveThreads + startedThreadsDiff - newLiveThreads));
+
     lastStartedThreads = newStartedThreads;
+    lastLiveThreads = newLiveThreads;
 
     return true;
   }
