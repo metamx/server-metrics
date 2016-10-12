@@ -53,25 +53,21 @@ public class JvmMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    // jvm/mem
     emitJvmMemMetrics(emitter);
-
-    // direct memory usage
     emitDirectMemMetrics(emitter);
-
-    // jvm/gc
     emitGcMetrics(emitter);
 
     return true;
   }
 
+  // These metrics are going to be replaced by new jvm/gc/mem/* metrics
   @Deprecated
   private void emitJvmMemMetrics(ServiceEmitter emitter)
   {
     // I have no idea why, but jvm/mem is slightly more than the sum of jvm/pool. Let's just include
     // them both.
     final Map<String, MemoryUsage> usages = ImmutableMap.of(
-        "heap",    ManagementFactory.getMemoryMXBean().getHeapMemoryUsage(),
+        "heap", ManagementFactory.getMemoryMXBean().getHeapMemoryUsage(),
         "nonheap", ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage()
     );
     for (Map.Entry<String, MemoryUsage> entry : usages.entrySet()) {
@@ -81,10 +77,10 @@ public class JvmMonitor extends AbstractMonitor
           .setDimension("memKind", kind);
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
-      emitter.emit(builder.build("jvm/mem/max",       usage.getMax()));
+      emitter.emit(builder.build("jvm/mem/max", usage.getMax()));
       emitter.emit(builder.build("jvm/mem/committed", usage.getCommitted()));
-      emitter.emit(builder.build("jvm/mem/used",      usage.getUsed()));
-      emitter.emit(builder.build("jvm/mem/init",      usage.getInit()));
+      emitter.emit(builder.build("jvm/mem/used", usage.getUsed()));
+      emitter.emit(builder.build("jvm/mem/init", usage.getInit()));
     }
 
     // jvm/pool
@@ -96,10 +92,10 @@ public class JvmMonitor extends AbstractMonitor
           .setDimension("poolName", pool.getName());
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
-      emitter.emit(builder.build("jvm/pool/max",       usage.getMax()));
+      emitter.emit(builder.build("jvm/pool/max", usage.getMax()));
       emitter.emit(builder.build("jvm/pool/committed", usage.getCommitted()));
-      emitter.emit(builder.build("jvm/pool/used",      usage.getUsed()));
-      emitter.emit(builder.build("jvm/pool/init",      usage.getInit()));
+      emitter.emit(builder.build("jvm/pool/used", usage.getUsed()));
+      emitter.emit(builder.build("jvm/pool/init", usage.getInit()));
     }
   }
 
@@ -127,7 +123,7 @@ public class JvmMonitor extends AbstractMonitor
    * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
    * sjk-core/src/main/java/org/gridkit/jvmtool/PerfCounterGcCpuUsageMonitor.java
    */
-  private class GcCounters
+  private static class GcCounters
   {
     private List<GcGeneration> generations = new ArrayList<>();
 
@@ -149,16 +145,14 @@ public class JvmMonitor extends AbstractMonitor
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
       for (GcGeneration generation : generations) {
-        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-        generation.emit(emitter, builder);
+        generation.emit(emitter, dimensions);
       }
     }
   }
 
-  private class GcGeneration
+  private static class GcGeneration
   {
-    private String name;
+    private final String name;
     private GcGenerationCollector collector = null;
     private List<GcGenerationSpace> spaces = new ArrayList<>();
 
@@ -166,7 +160,10 @@ public class JvmMonitor extends AbstractMonitor
     {
       this.name = name.toLowerCase();
 
-      long spacesCount = ((JStatData.LongCounter) jStatCounters.get(String.format("sun.gc.generation.%d.spaces", genIndex))).getLong();
+      long spacesCount = ((JStatData.LongCounter) jStatCounters.get(String.format(
+          "sun.gc.generation.%d.spaces",
+          genIndex
+      ))).getLong();
       for (long spaceIndex = 0; spaceIndex < spacesCount; spaceIndex++) {
         spaces.add(new GcGenerationSpace(jStatCounters, genIndex, spaceIndex));
       }
@@ -176,23 +173,32 @@ public class JvmMonitor extends AbstractMonitor
       }
     }
 
-    void emit(ServiceEmitter emitter, ServiceMetricEvent.Builder builder)
+    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      builder.setDimension("gcGen", name);
+      Map<String, String[]> dimensionsCopy = ImmutableMap
+          .<String, String[]>builder()
+          .putAll(dimensions)
+          .put("gcGen", new String[]{name})
+          .build();
 
       if (collector != null) {
-        collector.emit(emitter, builder);
+        collector.emit(emitter, dimensionsCopy);
+        dimensionsCopy = ImmutableMap
+            .<String, String[]>builder()
+            .putAll(dimensionsCopy)
+            .put("gcName", new String[]{collector.name})
+            .build();
       }
 
-      for (GcGenerationSpace space: spaces) {
-        space.emit(emitter, builder);
+      for (GcGenerationSpace space : spaces) {
+        space.emit(emitter, dimensionsCopy);
       }
     }
   }
 
-  private class GcGenerationCollector
+  private static class GcGenerationCollector
   {
-    private String name;
+    private final String name;
     private final LongCounter invocationsCounter;
     private final TickCounter cpuCounter;
     private long lastInvocations = 0;
@@ -210,8 +216,11 @@ public class JvmMonitor extends AbstractMonitor
       cpuCounter = (TickCounter) jStatCounters.get(String.format("%s.time", collectorKeyPrefix));
     }
 
-    void emit(ServiceEmitter emitter, ServiceMetricEvent.Builder builder)
+    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
       builder.setDimension("gcName", name);
 
       long newInvocations = invocationsCounter.getLong();
@@ -227,25 +236,34 @@ public class JvmMonitor extends AbstractMonitor
     {
       switch (name) {
         // Young gen
-        case "Copy": return "serial";
-        case "PSScavenge": return "parallel";
-        case "PCopy": return "cms";
-        case "G1 incremental collections": return "g1";
+        case "Copy":
+          return "serial";
+        case "PSScavenge":
+          return "parallel";
+        case "PCopy":
+          return "cms";
+        case "G1 incremental collections":
+          return "g1";
 
         // Old gen
-        case "MCS": return "serial";
-        case "PSParallelCompact": return "parallel";
-        case "CMS": return "cms";
-        case "G1 stop-the-world full collections": return "g1";
+        case "MCS":
+          return "serial";
+        case "PSParallelCompact":
+          return "parallel";
+        case "CMS":
+          return "cms";
+        case "G1 stop-the-world full collections":
+          return "g1";
 
-        default: return name;
+        default:
+          return name;
       }
     }
   }
 
-  private class GcGenerationSpace
+  private static class GcGenerationSpace
   {
-    private String name;
+    private final String name;
 
     private LongCounter maxCounter;
     private LongCounter capacityCounter;
@@ -260,20 +278,23 @@ public class JvmMonitor extends AbstractMonitor
       StringCounter nameCounter = (StringCounter) jStatCounters.get(nameKey);
       name = nameCounter.toString().toLowerCase();
 
-      maxCounter      = (LongCounter) jStatCounters.get(String.format("%s.maxCapacity",  spaceKeyPrefix));
-      capacityCounter = (LongCounter) jStatCounters.get(String.format("%s.capacity",     spaceKeyPrefix));
-      usedCounter     = (LongCounter) jStatCounters.get(String.format("%s.used",         spaceKeyPrefix));
-      initCounter     = (LongCounter) jStatCounters.get(String.format("%s.initCapacity", spaceKeyPrefix));
+      maxCounter = (LongCounter) jStatCounters.get(String.format("%s.maxCapacity", spaceKeyPrefix));
+      capacityCounter = (LongCounter) jStatCounters.get(String.format("%s.capacity", spaceKeyPrefix));
+      usedCounter = (LongCounter) jStatCounters.get(String.format("%s.used", spaceKeyPrefix));
+      initCounter = (LongCounter) jStatCounters.get(String.format("%s.initCapacity", spaceKeyPrefix));
     }
 
-    void emit(ServiceEmitter emitter, ServiceMetricEvent.Builder builder)
+    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+
       builder.setDimension("gcGenSpaceName", name);
 
-      emitter.emit(builder.build("jvm/gc/mem/max",      maxCounter.getLong()));
+      emitter.emit(builder.build("jvm/gc/mem/max", maxCounter.getLong()));
       emitter.emit(builder.build("jvm/gc/mem/capacity", capacityCounter.getLong()));
-      emitter.emit(builder.build("jvm/gc/mem/used",     usedCounter.getLong()));
-      emitter.emit(builder.build("jvm/gc/mem/init",     initCounter.getLong()));
+      emitter.emit(builder.build("jvm/gc/mem/used", usedCounter.getLong()));
+      emitter.emit(builder.build("jvm/gc/mem/init", initCounter.getLong()));
     }
   }
 }
