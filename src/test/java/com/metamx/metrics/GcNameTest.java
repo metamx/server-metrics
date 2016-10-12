@@ -18,10 +18,6 @@ package com.metamx.metrics;
 
 import org.gridkit.lab.jvm.perfdata.JStatData;
 
-import java.lang.management.GarbageCollectorMXBean;
-import java.lang.management.ManagementFactory;
-import java.util.List;
-
 public class GcNameTest
 {
 
