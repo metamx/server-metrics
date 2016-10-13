@@ -101,7 +101,6 @@ public class JvmMonitor extends AbstractMonitor
 
   private void emitDirectMemMetrics(ServiceEmitter emitter)
   {
-
     for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
           .setDimension("bufferpoolName", pool.getName());
