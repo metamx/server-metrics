@@ -77,19 +77,17 @@
             <version>0.3.4</version>
         </dependency>
         <dependency>
-            <!-- sigar is only required for com.metamx.metrics.SysMonitor
-                 use the following repository to resolve this dependency
-                 https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/ -->
             <groupId>org.hyperic</groupId>
             <artifactId>sigar</artifactId>
             <version>${sigar.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.hyperic</groupId>
             <artifactId>sigar-dist</artifactId>
             <version>${sigar.version}</version>
             <type>zip</type>
+            <!-- "Provided" because this dependency is used only during the build itself: some files from this
+            dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -173,17 +171,4 @@
             </resource>
         </resources>
     </build>
-
-    <profiles>
-      <profile>
-        <id>build</id>
-        <repositories>
-          <repository>
-            <id>sigar</id>
-            <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
-          </repository>
-        </repositories>
-      </profile>
-    </profiles>
-
 </project>
