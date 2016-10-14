@@ -37,17 +37,19 @@ public class JvmThreadsMonitor extends AbstractMonitor
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
+    // Because between next two calls on ThreadMXBean new threads can be started we can observe some inconsistency
+    // in counters values and finished counter could be even negative
     int newLiveThreads = threadBean.getThreadCount();
     long newStartedThreads = threadBean.getTotalStartedThreadCount();
 
     long startedThreadsDiff = newStartedThreads - lastStartedThreads;
 
-    emitter.emit(builder.build("jvm/threads/daemon", threadBean.getDaemonThreadCount()));
-    emitter.emit(builder.build("jvm/threads/livePeak", threadBean.getPeakThreadCount()));
-    emitter.emit(builder.build("jvm/threads/live", newLiveThreads));
     emitter.emit(builder.build("jvm/threads/started", startedThreadsDiff));
     emitter.emit(builder.build("jvm/threads/finished", lastLiveThreads + startedThreadsDiff - newLiveThreads));
+    emitter.emit(builder.build("jvm/threads/live", newLiveThreads));
+    emitter.emit(builder.build("jvm/threads/liveDaemon", threadBean.getDaemonThreadCount()));
 
+    emitter.emit(builder.build("jvm/threads/livePeak", threadBean.getPeakThreadCount()));
     threadBean.resetPeakThreadCount();
 
     lastStartedThreads = newStartedThreads;
