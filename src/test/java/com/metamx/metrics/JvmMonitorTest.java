@@ -20,6 +20,7 @@ import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -75,7 +76,12 @@ public class JvmMonitorTest
     public void emit(Event e)
     {
       ServiceMetricEvent event = (ServiceMetricEvent) e;
-      switch (event.getMetric() + "/" + event.toMap().get("gcGen")) {
+      String gcGen = null;
+      if (event.toMap().get("gcGen") != null) {
+        gcGen = ((List) event.toMap().get("gcGen")).get(0).toString();
+      }
+
+      switch (event.getMetric() + "/" + gcGen) {
         case "jvm/gc/count/old":
           oldGcCount = event.getValue();
           break;
