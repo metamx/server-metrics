@@ -33,6 +33,9 @@ public class Monitors
    */
   public static List<Monitor> createProductionJvmMonitors(Map<String, String[]> dimensions)
   {
+    // This list doesn't include SysMonitor because it should probably be run only in one JVM, if several JVMs are
+    // running on the same instance, so most of the time SysMonitor should be configured/set up differently than
+    // "simple" JVM monitors, created below.
     return ImmutableList.<Monitor>of(
         new JvmMonitor(dimensions),
         new JvmCpuMonitor(dimensions),
