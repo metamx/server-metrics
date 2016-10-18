@@ -16,27 +16,25 @@
 
 package com.metamx.metrics;
 
-import com.google.common.collect.ImmutableList;
-
 import java.util.List;
 import java.util.Map;
 
 public class Monitors
 {
   /**
-   * Creates a list of JVM-wide monitors, each configured with the given dimensions, one instance of each currently
-   * available JVM monitor type: {@link JvmMonitor}, {@link JvmCpuMonitor} and {@link JvmThreadsMonitor} (this list may
+   * Creates a JVM monitor, configured with the given dimensions, that gathers all currently available JVM-wide
+   * monitors: {@link JvmMonitor}, {@link JvmCpuMonitor} and {@link JvmThreadsMonitor} (this list may
    * change in any future release of this library, including a minor release).
    *
-   * @param dimensions common dimensions to configure each JVM monitor with
-   * @return a list of universally useful JVM-wide monitors
+   * @param dimensions common dimensions to configure the JVM monitor with
+   * @return a universally useful JVM-wide monitor
    */
-  public static List<Monitor> createProductionJvmMonitors(Map<String, String[]> dimensions)
+  public static Monitor createCompundProductionJvmMonitor(Map<String, String[]> dimensions)
   {
     // This list doesn't include SysMonitor because it should probably be run only in one JVM, if several JVMs are
     // running on the same instance, so most of the time SysMonitor should be configured/set up differently than
     // "simple" JVM monitors, created below.
-    return ImmutableList.<Monitor>of(
+    return and( // Could equally be or(), because all member monitors always return true from their monitor() methods.
         new JvmMonitor(dimensions),
         new JvmCpuMonitor(dimensions),
         new JvmThreadsMonitor(dimensions)
