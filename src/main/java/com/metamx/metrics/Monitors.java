@@ -29,7 +29,7 @@ public class Monitors
    * @param dimensions common dimensions to configure the JVM monitor with
    * @return a universally useful JVM-wide monitor
    */
-  public static Monitor createCompundProductionJvmMonitor(Map<String, String[]> dimensions)
+  public static Monitor createCompoundJvmMonitor(Map<String, String[]> dimensions)
   {
     // This list doesn't include SysMonitor because it should probably be run only in one JVM, if several JVMs are
     // running on the same instance, so most of the time SysMonitor should be configured/set up differently than
