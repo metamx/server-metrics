@@ -17,9 +17,30 @@
 package com.metamx.metrics;
 
 import java.util.List;
+import java.util.Map;
 
 public class Monitors
 {
+  /**
+   * Creates a JVM monitor, configured with the given dimensions, that gathers all currently available JVM-wide
+   * monitors: {@link JvmMonitor}, {@link JvmCpuMonitor} and {@link JvmThreadsMonitor} (this list may
+   * change in any future release of this library, including a minor release).
+   *
+   * @param dimensions common dimensions to configure the JVM monitor with
+   * @return a universally useful JVM-wide monitor
+   */
+  public static Monitor createCompoundJvmMonitor(Map<String, String[]> dimensions)
+  {
+    // This list doesn't include SysMonitor because it should probably be run only in one JVM, if several JVMs are
+    // running on the same instance, so most of the time SysMonitor should be configured/set up differently than
+    // "simple" JVM monitors, created below.
+    return and( // Could equally be or(), because all member monitors always return true from their monitor() methods.
+        new JvmMonitor(dimensions),
+        new JvmCpuMonitor(dimensions),
+        new JvmThreadsMonitor(dimensions)
+    );
+  }
+
   public static Monitor and(Monitor... monitors)
   {
     return new CompoundMonitor(monitors)
