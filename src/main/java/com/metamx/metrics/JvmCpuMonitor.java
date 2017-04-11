@@ -27,7 +27,7 @@ import org.hyperic.sigar.ProcCpu;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
 
-public class JvmCpuMonitor extends AbstractMonitor
+public class JvmCpuMonitor extends FeedDefiningMonitor
 {
   private static final Logger log = new Logger(JvmCpuMonitor.class);
 
@@ -45,6 +45,12 @@ public class JvmCpuMonitor extends AbstractMonitor
 
   public JvmCpuMonitor(Map<String, String[]> dimensions)
   {
+    this(dimensions, DEFAULT_METRICS_FEED);
+  }
+
+  public JvmCpuMonitor(Map<String, String[]> dimensions, String feed)
+  {
+    super(feed);
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
   }
@@ -55,7 +61,7 @@ public class JvmCpuMonitor extends AbstractMonitor
     // process CPU
     try {
       ProcCpu procCpu = sigar.getProcCpu(currentProcessId);
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      final ServiceMetricEvent.Builder builder = builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       // delta for total, sys, user
       Map<String, Long> procDiff = diff.to(

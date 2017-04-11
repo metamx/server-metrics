@@ -33,7 +33,7 @@ import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
 import org.gridkit.lab.jvm.perfdata.JStatData.StringCounter;
 import org.gridkit.lab.jvm.perfdata.JStatData.TickCounter;
 
-public class JvmMonitor extends AbstractMonitor
+public class JvmMonitor extends FeedDefiningMonitor
 {
   private final Map<String, String[]> dimensions;
 
@@ -46,6 +46,12 @@ public class JvmMonitor extends AbstractMonitor
 
   public JvmMonitor(Map<String, String[]> dimensions)
   {
+    this(dimensions, DEFAULT_METRICS_FEED);
+  }
+
+  public JvmMonitor(Map<String, String[]> dimensions, String feed)
+  {
+    super(feed);
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
   }
@@ -73,8 +79,7 @@ public class JvmMonitor extends AbstractMonitor
     for (Map.Entry<String, MemoryUsage> entry : usages.entrySet()) {
       final String kind = entry.getKey();
       final MemoryUsage usage = entry.getValue();
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-          .setDimension("memKind", kind);
+      final ServiceMetricEvent.Builder builder = builder().setDimension("memKind", kind);
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       emitter.emit(builder.build("jvm/mem/max", usage.getMax()));
@@ -87,7 +92,7 @@ public class JvmMonitor extends AbstractMonitor
     for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans()) {
       final String kind = pool.getType() == MemoryType.HEAP ? "heap" : "nonheap";
       final MemoryUsage usage = pool.getUsage();
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
+      final ServiceMetricEvent.Builder builder = builder()
           .setDimension("poolKind", kind)
           .setDimension("poolName", pool.getName());
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
@@ -102,8 +107,7 @@ public class JvmMonitor extends AbstractMonitor
   private void emitDirectMemMetrics(ServiceEmitter emitter)
   {
     for (BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-          .setDimension("bufferpoolName", pool.getName());
+      final ServiceMetricEvent.Builder builder = builder().setDimension("bufferpoolName", pool.getName());
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       emitter.emit(builder.build("jvm/bufferpool/capacity", pool.getTotalCapacity()));
@@ -199,18 +203,24 @@ public class JvmMonitor extends AbstractMonitor
   private static class GcGenerationCollector
   {
     private final String name;
+    private final String feed;
     private final LongCounter invocationsCounter;
     private final TickCounter cpuCounter;
     private long lastInvocations = 0;
     private long lastCpuNanos = 0;
 
-    GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex)
+    GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex){
+      this(jStatCounters, genIndex, DEFAULT_METRICS_FEED);
+    }
+
+    GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String feed)
     {
       String collectorKeyPrefix = String.format("sun.gc.collector.%d", genIndex);
 
       String nameKey = String.format("%s.name", collectorKeyPrefix);
       StringCounter nameCounter = (StringCounter) jStatCounters.get(nameKey);
       name = getReadableName(nameCounter.getString());
+      this.feed = feed;
 
       invocationsCounter = (LongCounter) jStatCounters.get(String.format("%s.invocations", collectorKeyPrefix));
       cpuCounter = (TickCounter) jStatCounters.get(String.format("%s.time", collectorKeyPrefix));
@@ -218,7 +228,7 @@ public class JvmMonitor extends AbstractMonitor
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder().setFeed(feed);
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       long newInvocations = invocationsCounter.getLong();
@@ -262,19 +272,25 @@ public class JvmMonitor extends AbstractMonitor
   private static class GcGenerationSpace
   {
     private final String name;
+    private final String feed;
 
     private final LongCounter maxCounter;
     private final LongCounter capacityCounter;
     private final LongCounter usedCounter;
     private final LongCounter initCounter;
 
-    GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex)
+    GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex){
+      this(jStatCounters, genIndex, spaceIndex, DEFAULT_METRICS_FEED);
+    }
+
+    GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex, String feed)
     {
       String spaceKeyPrefix = String.format("sun.gc.generation.%d.space.%d", genIndex, spaceIndex);
 
       String nameKey = String.format("%s.name", spaceKeyPrefix);
       StringCounter nameCounter = (StringCounter) jStatCounters.get(nameKey);
       name = nameCounter.toString().toLowerCase();
+      this.feed = feed;
 
       maxCounter = (LongCounter) jStatCounters.get(String.format("%s.maxCapacity", spaceKeyPrefix));
       capacityCounter = (LongCounter) jStatCounters.get(String.format("%s.capacity", spaceKeyPrefix));
@@ -284,7 +300,7 @@ public class JvmMonitor extends AbstractMonitor
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder().setFeed(feed);
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       builder.setDimension("gcGenSpaceName", name);

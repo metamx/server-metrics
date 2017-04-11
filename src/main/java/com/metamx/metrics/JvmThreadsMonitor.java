@@ -11,7 +11,7 @@ import java.util.Map;
 import org.gridkit.lab.jvm.perfdata.JStatData;
 import org.gridkit.lab.jvm.perfdata.JStatData.LongCounter;
 
-public class JvmThreadsMonitor extends AbstractMonitor
+public class JvmThreadsMonitor extends FeedDefiningMonitor
 {
   private final Map<String, String[]> dimensions;
 
@@ -23,8 +23,13 @@ public class JvmThreadsMonitor extends AbstractMonitor
     this(ImmutableMap.<String, String[]>of());
   }
 
-  public JvmThreadsMonitor(Map<String, String[]> dimensions)
+  public JvmThreadsMonitor(Map<String, String[]> dimensions){
+    this(dimensions, DEFAULT_METRICS_FEED);
+  }
+
+  public JvmThreadsMonitor(Map<String, String[]> dimensions, String feed)
   {
+    super(feed);
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
   }
@@ -34,7 +39,7 @@ public class JvmThreadsMonitor extends AbstractMonitor
   {
     ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
 
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+    final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
     // Because between next two calls on ThreadMXBean new threads can be started we can observe some inconsistency
