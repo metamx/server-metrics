@@ -126,7 +126,7 @@ public class JvmMonitor extends FeedDefiningMonitor
    * https://github.com/aragozin/jvm-tools/blob/e0e37692648951440aa1a4ea5046261cb360df70/
    * sjk-core/src/main/java/org/gridkit/jvmtool/PerfCounterGcCpuUsageMonitor.java
    */
-  private static class GcCounters
+  private class GcCounters
   {
     private final List<GcGeneration> generations = new ArrayList<>();
 
@@ -153,14 +153,13 @@ public class JvmMonitor extends FeedDefiningMonitor
     }
   }
 
-  private static class GcGeneration
+  private class GcGeneration
   {
     private final String name;
     private final GcGenerationCollector collector;
     private final List<GcGenerationSpace> spaces = new ArrayList<>();
 
-    GcGeneration(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String name)
-    {
+    GcGeneration(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String name){
       this.name = name.toLowerCase();
 
       long spacesCount = ((JStatData.LongCounter) jStatCounters.get(
@@ -200,27 +199,20 @@ public class JvmMonitor extends FeedDefiningMonitor
     }
   }
 
-  private static class GcGenerationCollector
+  private class GcGenerationCollector
   {
     private final String name;
-    private final String feed;
     private final LongCounter invocationsCounter;
     private final TickCounter cpuCounter;
     private long lastInvocations = 0;
     private long lastCpuNanos = 0;
 
     GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex){
-      this(jStatCounters, genIndex, DEFAULT_METRICS_FEED);
-    }
-
-    GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String feed)
-    {
       String collectorKeyPrefix = String.format("sun.gc.collector.%d", genIndex);
 
       String nameKey = String.format("%s.name", collectorKeyPrefix);
       StringCounter nameCounter = (StringCounter) jStatCounters.get(nameKey);
       name = getReadableName(nameCounter.getString());
-      this.feed = feed;
 
       invocationsCounter = (LongCounter) jStatCounters.get(String.format("%s.invocations", collectorKeyPrefix));
       cpuCounter = (TickCounter) jStatCounters.get(String.format("%s.time", collectorKeyPrefix));
@@ -228,7 +220,7 @@ public class JvmMonitor extends FeedDefiningMonitor
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder().setFeed(feed);
+      final ServiceMetricEvent.Builder builder = builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       long newInvocations = invocationsCounter.getLong();
@@ -269,10 +261,9 @@ public class JvmMonitor extends FeedDefiningMonitor
     }
   }
 
-  private static class GcGenerationSpace
+  private class GcGenerationSpace
   {
     private final String name;
-    private final String feed;
 
     private final LongCounter maxCounter;
     private final LongCounter capacityCounter;
@@ -280,17 +271,11 @@ public class JvmMonitor extends FeedDefiningMonitor
     private final LongCounter initCounter;
 
     GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex){
-      this(jStatCounters, genIndex, spaceIndex, DEFAULT_METRICS_FEED);
-    }
-
-    GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex, String feed)
-    {
       String spaceKeyPrefix = String.format("sun.gc.generation.%d.space.%d", genIndex, spaceIndex);
 
       String nameKey = String.format("%s.name", spaceKeyPrefix);
       StringCounter nameCounter = (StringCounter) jStatCounters.get(nameKey);
       name = nameCounter.toString().toLowerCase();
-      this.feed = feed;
 
       maxCounter = (LongCounter) jStatCounters.get(String.format("%s.maxCapacity", spaceKeyPrefix));
       capacityCounter = (LongCounter) jStatCounters.get(String.format("%s.capacity", spaceKeyPrefix));
@@ -300,7 +285,7 @@ public class JvmMonitor extends FeedDefiningMonitor
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
     {
-      final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder().setFeed(feed);
+      final ServiceMetricEvent.Builder builder = builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       builder.setDimension("gcGenSpaceName", name);
