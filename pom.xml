@@ -74,6 +74,7 @@
             <groupId>org.hyperic</groupId>
             <artifactId>sigar</artifactId>
             <version>${sigar.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.hyperic</groupId>
