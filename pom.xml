@@ -25,7 +25,7 @@
     </parent>
 
     <artifactId>server-metrics</artifactId>
-    <version>0.4.3-SNAPSHOT</version>
+    <version>0.4.3</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Emit metrics here</description>
@@ -51,7 +51,7 @@
         <connection>scm:git:ssh://git@github.com/metamx/server-metrics.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/server-metrics.git</developerConnection>
         <url>https://github.com/metamx/server-metrics.git</url>
-        <tag>HEAD</tag>
+        <tag>server-metrics-0.4.3</tag>
     </scm>
 
     <properties>
