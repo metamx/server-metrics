@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import com.metamx.common.RE;
 import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
 import com.metamx.metrics.CgroupUtil;
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +36,6 @@ import java.util.regex.Pattern;
 
 public class ProcCgroupDiscoverer implements CgroupDiscoverer
 {
-  private static final Logger LOG = new Logger(ProcCgroupDiscoverer.class);
   private static final String CGROUP_TYPE = "cgroup";
   private static final String PROC_TYPE = "getProc";
 
@@ -60,8 +58,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     if (cgroupDir.exists() && cgroupDir.isDirectory()) {
       return cgroupDir.toPath();
     }
-    LOG.warn("Invalid cgroup directory [%s]", cgroupDir);
-    return null;
+    throw new RE("Invalid cgroup directory [%s]", cgroupDir);
   }
 
   @VisibleForTesting

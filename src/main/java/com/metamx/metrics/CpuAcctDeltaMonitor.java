@@ -51,7 +51,7 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
 
   public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions, final String feed)
   {
-    this(feed, ImmutableMap.of(), new JvmPidDiscoverer(), new ProcCgroupDiscoverer());
+    this(feed, dimensions, new JvmPidDiscoverer(), new ProcCgroupDiscoverer());
   }
 
   public CpuAcctDeltaMonitor(
@@ -64,8 +64,8 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
     super(feed);
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
-    this.pidDiscoverer = pidDiscoverer;
-    this.cgroupDiscoverer = cgroupDiscoverer;
+    this.pidDiscoverer = Preconditions.checkNotNull(pidDiscoverer, "pidDiscoverer required");
+    this.cgroupDiscoverer = Preconditions.checkNotNull(cgroupDiscoverer, "cgroupDiscoverer required");
   }
 
   @Override
