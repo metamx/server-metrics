@@ -13,18 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.metamx.metrics.cgroups;
 
 import com.metamx.metrics.SigarUtil;
-import org.hyperic.sigar.Sigar;
 
 public class SigarPidDiscoverer implements PidDiscoverer
 {
-  private final Sigar sigar = SigarUtil.getSigar();
-
   @Override
   public long getPid()
   {
-    return sigar.getPid();
+    return SigarUtil.getCurrentProcessId();
   }
 }

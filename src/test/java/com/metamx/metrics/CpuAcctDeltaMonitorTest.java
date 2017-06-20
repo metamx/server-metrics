@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.metamx.metrics;
 
 import com.google.common.collect.ImmutableMap;
@@ -55,12 +56,6 @@ public class CpuAcctDeltaMonitorTest
       {
         return procDir;
       }
-
-      @Override
-      public long getProbabyPid()
-      {
-        return PID;
-      }
     };
     TestUtils.setUpCgroups(procDir, cgroupDir, PID);
     cpuacctDir = new File(
@@ -89,7 +84,7 @@ public class CpuAcctDeltaMonitorTest
         return PID;
       }
     }, (cgroup, pid) -> cpuacctDir.toPath());
-    final MonitorsTest.StubServiceEmitter emitter = new MonitorsTest.StubServiceEmitter("service", "host");
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertFalse(monitor.doMonitor(emitter));
     // First should just cache
     Assert.assertEquals(0, emitter.getEvents().size());

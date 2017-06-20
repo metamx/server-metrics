@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.metamx.metrics.cgroups;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -36,22 +37,21 @@ import java.util.regex.Pattern;
 public class ProcCgroupDiscoverer implements CgroupDiscoverer
 {
   private static final Logger LOG = new Logger(ProcCgroupDiscoverer.class);
-  // TODO: discover `/proc` via whatever is mounted by `/proc`
   private static final String CGROUP_TYPE = "cgroup";
   private static final String PROC_TYPE = "proc";
 
   @Override
   public Path discover(final String cgroup, long pid)
   {
-    Preconditions.checkNotNull(cgroup, "cgroup");
+    Preconditions.checkNotNull(cgroup, "cgroup required");
     // Wish List: find a way to cache these
     final File proc = proc();
     if (proc == null) {
       return null;
     }
-    final File procMounts = getProcMounts(proc);
-    final File procCgroups = getProcCgroups(proc);
-    final File pidCgroups = getPidCgroups(proc, pid);
+    final File procMounts = new File(proc, "mounts");
+    final File procCgroups = new File(proc, "cgroups");
+    final File pidCgroups = new File(new File(proc, Long.toString(pid)), "cgroup");
     final ProcCgroupsEntry procCgroupsEntry = getCgroupEntry(procCgroups, cgroup);
     final ProcMountsEntry procMountsEntry = getMountEntry(procMounts, cgroup);
     final ProcPidCgroupEntry procPidCgroupEntry = getPidCgroupEntry(pidCgroups, procCgroupsEntry.hierarchy);
@@ -67,19 +67,9 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
   }
 
   @VisibleForTesting
-  public long getProbabyPid()
-  {
-    try {
-      return CgroupUtil.getProbablyPID();
-    }
-    catch (CgroupUtil.IndeterminatePid indeterminatePid) {
-      throw Throwables.propagate(indeterminatePid);
-    }
-  }
-
-  @VisibleForTesting
   public File proc()
   {
+    // Wish List: discover `/proc` in a more reliable way
     final File proc = Paths.get("/proc").toFile();
     Path foundProc = null;
     if (proc.exists() && proc.isDirectory()) {
@@ -111,25 +101,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     return null;
   }
 
-  @VisibleForTesting
-  File getProcMounts(File proc)
-  {
-    return new File(proc, "mounts");
-  }
-
-  @VisibleForTesting
-  File getProcCgroups(File proc)
-  {
-    return new File(proc, "cgroups");
-  }
-
-  @VisibleForTesting
-  File getPidCgroups(File proc, long pid)
-  {
-    return new File(new File(proc, Long.toString(pid)), "cgroup");
-  }
-
-  final ProcPidCgroupEntry getPidCgroupEntry(final File pidCgroups, final int hierarchy)
+  private ProcPidCgroupEntry getPidCgroupEntry(final File pidCgroups, final int hierarchy)
   {
     final List<String> lines;
     try {
@@ -147,7 +119,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     throw new RuntimeException(StringUtils.safeFormat("No hierarchy found for [%d]", hierarchy));
   }
 
-  final ProcCgroupsEntry getCgroupEntry(final File procCgroups, final String cgroup)
+  private ProcCgroupsEntry getCgroupEntry(final File procCgroups, final String cgroup)
   {
     final List<String> lines;
     try {
@@ -168,7 +140,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     throw new RuntimeException(StringUtils.safeFormat("Hierarchy for [%s] not found", cgroup));
   }
 
-  final ProcMountsEntry getMountEntry(final File procMounts, final String cgroup)
+  private ProcMountsEntry getMountEntry(final File procMounts, final String cgroup)
   {
     final List<String> lines;
     try {

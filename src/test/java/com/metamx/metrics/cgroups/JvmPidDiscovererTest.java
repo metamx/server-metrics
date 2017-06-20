@@ -13,28 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.metamx.metrics.cgroups;
 
-import com.google.common.base.Throwables;
-import com.metamx.metrics.CgroupUtil;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class InterningJvmPidDiscoverer implements PidDiscoverer
+public class JvmPidDiscovererTest
 {
-  private static final String KEY = "pid";
-  private final ConcurrentMap<String, Long> pid = new ConcurrentHashMap<>();
-
-  @Override
-  public long getPid()
+  @Test
+  public void getPid() throws Exception
   {
-    return pid.computeIfAbsent(KEY, unused -> {
-      try {
-        return CgroupUtil.getProbablyPID();
-      }
-      catch (CgroupUtil.IndeterminatePid indeterminatePid) {
-        throw Throwables.propagate(indeterminatePid);
-      }
-    });
+    Assert.assertNotNull(new JvmPidDiscoverer().getPid());
   }
 }

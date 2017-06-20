@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.metamx.metrics.cgroups;
 
 import java.io.File;
@@ -50,12 +51,6 @@ public class CpuAcctTest
       public File proc()
       {
         return procDir;
-      }
-
-      @Override
-      public long getProbabyPid()
-      {
-        return PID;
       }
     };
     TestUtils.setUpCgroups(procDir, cgroupDir, PID);

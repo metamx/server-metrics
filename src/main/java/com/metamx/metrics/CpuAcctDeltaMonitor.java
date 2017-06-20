@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.metamx.metrics;
 
 import com.google.common.base.Preconditions;
@@ -22,7 +23,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.cgroups.CgroupDiscoverer;
 import com.metamx.metrics.cgroups.CpuAcct;
-import com.metamx.metrics.cgroups.InterningJvmPidDiscoverer;
+import com.metamx.metrics.cgroups.JvmPidDiscoverer;
 import com.metamx.metrics.cgroups.PidDiscoverer;
 import com.metamx.metrics.cgroups.ProcCgroupDiscoverer;
 import java.util.Map;
@@ -51,7 +52,7 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
 
   public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions, final String feed)
   {
-    this(feed, ImmutableMap.of(), new InterningJvmPidDiscoverer(), new ProcCgroupDiscoverer());
+    this(feed, ImmutableMap.of(), new JvmPidDiscoverer(), new ProcCgroupDiscoverer());
   }
 
   public CpuAcctDeltaMonitor(
