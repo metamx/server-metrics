@@ -18,9 +18,7 @@ package com.metamx.metrics.cgroups;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.metamx.common.RE;
-import com.metamx.common.StringUtils;
 import com.metamx.metrics.CgroupUtil;
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +67,7 @@ public class CpuAcct
       return parse(Files.readAllLines(cpuacct.toPath(), Charsets.UTF_8));
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

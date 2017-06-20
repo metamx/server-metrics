@@ -19,7 +19,6 @@ package com.metamx.metrics.cgroups;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import com.metamx.common.RE;
@@ -82,7 +81,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
       }
       catch (IOException e) {
         // Unlikely
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       if (foundProc != null) {
         throw new RE("Expected proc to be mounted on /proc, but was on [%s]", foundProc);
@@ -101,7 +100,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
       lines = Files.readLines(pidCgroups, Charsets.UTF_8);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     for (final String line : lines) {
       final ProcPidCgroupEntry entry = ProcPidCgroupEntry.parse(line);
@@ -119,7 +118,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
       lines = Files.readLines(procCgroups, Charsets.UTF_8);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     for (final String line : lines) {
       if (line.startsWith("#")) {
@@ -140,7 +139,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
       lines = Files.readLines(procMounts, Charsets.UTF_8);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     for (final String line : lines) {
