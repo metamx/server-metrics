@@ -19,6 +19,7 @@ package com.metamx.metrics.cgroups;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.metamx.common.RE;
 import com.metamx.common.StringUtils;
 import com.metamx.metrics.CgroupUtil;
 import java.io.File;
@@ -38,18 +39,18 @@ public class CpuAcct
     // File has a header. We skip it
     // See src/test/resources/cpuacct.usage_all for an example
     final int ncpus = lines.size() - 1;
-    final long[] usr_time = new long[ncpus];
-    final long[] sys_time = new long[ncpus];
+    final long[] usrTime = new long[ncpus];
+    final long[] sysTime = new long[ncpus];
     for (int i = 1; i < lines.size(); i++) {
       final String[] splits = lines.get(i).split(CgroupUtil.SPACE_MATCH, 3);
       if (splits.length != 3) {
-        throw new RuntimeException(StringUtils.safeFormat("Error parsing [%s]", lines.get(i)));
+        throw new RE("Error parsing [%s]", lines.get(i));
       }
       final int cpu_num = Integer.parseInt(splits[0]);
-      usr_time[cpu_num] = Long.parseLong(splits[1]);
-      sys_time[cpu_num] = Long.parseLong(splits[2]);
+      usrTime[cpu_num] = Long.parseLong(splits[1]);
+      sysTime[cpu_num] = Long.parseLong(splits[2]);
     }
-    return new CpuAcctMetric(usr_time, sys_time);
+    return new CpuAcctMetric(usrTime, sysTime);
   }
 
   private final CgroupDiscoverer cgroupDiscoverer;

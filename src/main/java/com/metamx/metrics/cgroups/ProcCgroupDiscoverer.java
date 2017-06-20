@@ -23,7 +23,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import com.metamx.common.RE;
-import com.metamx.common.StringUtils;
 import com.metamx.metrics.CgroupUtil;
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +42,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
   public Path discover(final String cgroup, long pid)
   {
     Preconditions.checkNotNull(cgroup, "cgroup required");
-    // Wish List: find a way to cache these
+    // TODO: find a way to cache these
     final File proc = getProc();
     final File procMounts = new File(proc, "mounts");
     final File procCgroups = new File(proc, "cgroups");
@@ -64,8 +63,8 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
   @VisibleForTesting
   public File getProc()
   {
-    // Wish List: discover `/getProc` in a more reliable way
-    final File proc = Paths.get("/proc").toFile();
+    // TODO: discover `/proc` in a more reliable way
+    final File proc = new File("/proc");
     Path foundProc = null;
     if (proc.exists() && proc.isDirectory()) {
       // Sanity check
@@ -110,7 +109,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
         return entry;
       }
     }
-    throw new RuntimeException(StringUtils.safeFormat("No hierarchy found for [%d]", hierarchy));
+    throw new RE("No hierarchy found for [%d]", hierarchy);
   }
 
   private ProcCgroupsEntry getCgroupEntry(final File procCgroups, final String cgroup)
@@ -131,7 +130,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
         return entry;
       }
     }
-    throw new RuntimeException(StringUtils.safeFormat("Hierarchy for [%s] not found", cgroup));
+    throw new RE("Hierarchy for [%s] not found", cgroup);
   }
 
   private ProcMountsEntry getMountEntry(final File procMounts, final String cgroup)
@@ -150,7 +149,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
         return entry;
       }
     }
-    throw new RuntimeException(StringUtils.safeFormat("Cgroup [%s] not found", cgroup));
+    throw new RE("Cgroup [%s] not found", cgroup);
   }
 
   /**

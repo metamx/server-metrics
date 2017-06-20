@@ -18,16 +18,14 @@ package com.metamx.metrics.cgroups;
 
 import com.metamx.common.RE;
 import java.lang.management.ManagementFactory;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 
+/**
+ * For systems that for whatever reason cannot use Sigar (through com.metamx.metrics.cgroups.SigarPidDiscoverer ),
+ * this attempts to get the PID from the JVM "name".
+ */
 public class JvmPidDiscoverer implements PidDiscoverer
 {
-  private static final String KEY = "pid";
-  private final ConcurrentMap<String, Long> pid = new ConcurrentHashMap<>();
-
-
   /**
    * Returns the PID as a best guess. This uses methods that are not guaranteed to actually be the PID.
    * <p>
@@ -40,18 +38,25 @@ public class JvmPidDiscoverer implements PidDiscoverer
   @Override
   public long getPid()
   {
-    return pid.computeIfAbsent(KEY, unused -> {
+    return Inner.PID;
+  }
+
+  private static class Inner
+  {
+    private static final long PID;
+
+    static {
       final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
       final String[] nameSplits = jvmName.split(Pattern.quote("@"));
       if (nameSplits.length != 2) {
         throw new RE("Unable to determine pid from [%s]", jvmName);
       }
       try {
-        return Long.parseLong(nameSplits[0]);
+        PID = Long.parseLong(nameSplits[0]);
       }
       catch (NumberFormatException nfe) {
         throw new RE(nfe, "Unable to determine pid from [%s]", jvmName);
       }
-    });
+    }
   }
 }
