@@ -27,7 +27,7 @@ import org.junit.Test;
 
 public class MonitorsTest
 {
-  private static class StubServiceEmitter extends ServiceEmitter
+  static class StubServiceEmitter extends ServiceEmitter
   {
     private List<Event> events = new ArrayList<>();
 
