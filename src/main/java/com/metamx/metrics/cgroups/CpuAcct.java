@@ -33,17 +33,17 @@ public class CpuAcct
   private static final String CGROUP_ACCT_FILE = "cpuacct.usage_all";
 
   // Private because it requires a specific format and cant' take a generic list of strings
-  private static CpuAcctMetric parse(final List<String> input)
+  private static CpuAcctMetric parse(final List<String> lines)
   {
     // File has a header. We skip it
     // See src/test/resources/cpuacct.usage_all for an example
-    final int ncpus = input.size() - 1;
+    final int ncpus = lines.size() - 1;
     final long[] usr_time = new long[ncpus];
     final long[] sys_time = new long[ncpus];
-    for (int i = 1; i < input.size(); i++) {
-      final String[] splits = input.get(i).split(CgroupUtil.SPACE_MATCH, 3);
+    for (int i = 1; i < lines.size(); i++) {
+      final String[] splits = lines.get(i).split(CgroupUtil.SPACE_MATCH, 3);
       if (splits.length != 3) {
-        throw new RuntimeException(StringUtils.safeFormat("Error parsing [%s]", input.get(i)));
+        throw new RuntimeException(StringUtils.safeFormat("Error parsing [%s]", lines.get(i)));
       }
       final int cpu_num = Integer.parseInt(splits[0]);
       usr_time[cpu_num] = Long.parseLong(splits[1]);
