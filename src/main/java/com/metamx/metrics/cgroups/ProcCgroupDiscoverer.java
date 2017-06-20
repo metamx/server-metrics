@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
+import com.metamx.common.RE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import com.metamx.metrics.CgroupUtil;
@@ -46,9 +47,6 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     Preconditions.checkNotNull(cgroup, "cgroup required");
     // Wish List: find a way to cache these
     final File proc = getProc();
-    if (proc == null) {
-      return null;
-    }
     final File procMounts = new File(proc, "mounts");
     final File procCgroups = new File(proc, "cgroups");
     final File pidCgroups = new File(new File(proc, Long.toString(pid)), "cgroup");
@@ -70,7 +68,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
   public File getProc()
   {
     // Wish List: discover `/getProc` in a more reliable way
-    final File proc = Paths.get("/getProc").toFile();
+    final File proc = Paths.get("/proc").toFile();
     Path foundProc = null;
     if (proc.exists() && proc.isDirectory()) {
       // Sanity check
@@ -91,14 +89,13 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
         throw Throwables.propagate(e);
       }
       if (foundProc != null) {
-        LOG.warn("Expected getProc to be mounted on /getProc, but was on [%s]", foundProc);
+        throw new RE("Expected proc to be mounted on /proc, but was on [%s]", foundProc);
       } else {
-        LOG.warn("No getProc entry found in /getProc/mounts");
+        throw new RE("No proc entry found in /proc/mounts");
       }
     } else {
-      LOG.warn("/getProc is not a valid directory");
+      throw new RE("/proc is not a valid directory");
     }
-    return null;
   }
 
   private ProcPidCgroupEntry getPidCgroupEntry(final File pidCgroups, final int hierarchy)
