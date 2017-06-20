@@ -38,14 +38,14 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
 {
   private static final Logger LOG = new Logger(ProcCgroupDiscoverer.class);
   private static final String CGROUP_TYPE = "cgroup";
-  private static final String PROC_TYPE = "proc";
+  private static final String PROC_TYPE = "getProc";
 
   @Override
   public Path discover(final String cgroup, long pid)
   {
     Preconditions.checkNotNull(cgroup, "cgroup required");
     // Wish List: find a way to cache these
-    final File proc = proc();
+    final File proc = getProc();
     if (proc == null) {
       return null;
     }
@@ -67,10 +67,10 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
   }
 
   @VisibleForTesting
-  public File proc()
+  public File getProc()
   {
-    // Wish List: discover `/proc` in a more reliable way
-    final File proc = Paths.get("/proc").toFile();
+    // Wish List: discover `/getProc` in a more reliable way
+    final File proc = Paths.get("/getProc").toFile();
     Path foundProc = null;
     if (proc.exists() && proc.isDirectory()) {
       // Sanity check
@@ -91,12 +91,12 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
         throw Throwables.propagate(e);
       }
       if (foundProc != null) {
-        LOG.warn("Expected proc to be mounted on /proc, but was on [%s]", foundProc);
+        LOG.warn("Expected getProc to be mounted on /getProc, but was on [%s]", foundProc);
       } else {
-        LOG.warn("No proc entry found in /proc/mounts");
+        LOG.warn("No getProc entry found in /getProc/mounts");
       }
     } else {
-      LOG.warn("/proc is not a valid directory");
+      LOG.warn("/getProc is not a valid directory");
     }
     return null;
   }

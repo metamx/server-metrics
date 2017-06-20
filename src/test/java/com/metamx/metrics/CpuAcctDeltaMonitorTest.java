@@ -52,7 +52,7 @@ public class CpuAcctDeltaMonitorTest
     discoverer = new ProcCgroupDiscoverer()
     {
       @Override
-      public File proc()
+      public File getProc()
       {
         return procDir;
       }

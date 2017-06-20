@@ -1,5 +1,5 @@
 sysfs /sys sysfs rw,seclabel,nosuid,nodev,noexec,relatime 0 0
-proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0
+getProc /getProc getProc rw,nosuid,nodev,noexec,relatime 0 0
 devtmpfs /dev devtmpfs rw,seclabel,nosuid,size=1007354668k,nr_inodes=251838667,mode=755 0 0
 securityfs /sys/kernel/security securityfs rw,nosuid,nodev,noexec,relatime 0 0
 tmpfs /dev/shm tmpfs rw,seclabel,nosuid,nodev 0 0
@@ -23,10 +23,10 @@ cgroup /sys/fs/cgroup/pids cgroup rw,nosuid,nodev,noexec,relatime,pids 0 0
 selinuxfs /sys/fs/selinux selinuxfs rw,relatime 0 0
 tmpfs /media tmpfs rw,seclabel,nosuid,nodev,noexec,relatime 0 0
 systemd-1 /boot autofs rw,relatime,fd=34,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=18428 0 0
-xenfs /proc/xen xenfs rw,relatime 0 0
+xenfs /getProc/xen xenfs rw,relatime 0 0
 tmpfs /tmp tmpfs rw,seclabel,nosuid,nodev 0 0
 hugetlbfs /dev/hugepages hugetlbfs rw,seclabel,relatime 0 0
-systemd-1 /proc/sys/fs/binfmt_misc autofs rw,relatime,fd=38,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=140296 0 0
+systemd-1 /getProc/sys/fs/binfmt_misc autofs rw,relatime,fd=38,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=140296 0 0
 debugfs /sys/kernel/debug debugfs rw,seclabel,relatime 0 0
 mqueue /dev/mqueue mqueue rw,seclabel,relatime 0 0
 /dev/xvda6 /usr/share/oem ext4 rw,seclabel,nodev,relatime,commit=600,data=ordered 0 0
