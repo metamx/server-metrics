@@ -20,23 +20,23 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.metamx.common.StringUtils;
-import com.metamx.common.logger.Logger;
 import com.metamx.metrics.CgroupUtil;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.LongStream;
 
 public class CpuAcct
 {
-  private static final Logger LOG = new Logger(CpuAcct.class);
   private static final String CGROUP = "cpuacct";
   private static final String CGROUP_ACCT_FILE = "cpuacct.usage_all";
-  private static final long[] EMPTY_LONG = new long[0];
-  private static final CpuAcctMetric EMPTY_METRIC = new CpuAcctMetric(EMPTY_LONG, EMPTY_LONG);
 
-  public static CpuAcctMetric parse(final List<String> input)
+  // Private because it requires a specific format and cant' take a generic list of strings
+  private static CpuAcctMetric parse(final List<String> input)
   {
+    // File has a header. We skip it
+    // See src/test/resources/cpuacct.usage_all for an example
     final int ncpus = input.size() - 1;
     final long[] usr_time = new long[ncpus];
     final long[] sys_time = new long[ncpus];
@@ -65,7 +65,7 @@ public class CpuAcct
   {
     final File cpuacct = new File(cgroupDiscoverer.discover(CGROUP, pidDiscoverer.getPid()).toFile(), CGROUP_ACCT_FILE);
     try {
-      return parse(java.nio.file.Files.readAllLines(cpuacct.toPath(), Charsets.UTF_8));
+      return parse(Files.readAllLines(cpuacct.toPath(), Charsets.UTF_8));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
