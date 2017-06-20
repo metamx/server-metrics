@@ -40,7 +40,7 @@ public class CpuAcct
     final int ncpus = input.size() - 1;
     final long[] usr_time = new long[ncpus];
     final long[] sys_time = new long[ncpus];
-    for (int i = 1; i < input.size(); ++i) {
+    for (int i = 1; i < input.size(); i++) {
       final String[] splits = input.get(i).split(CgroupUtil.SPACE_MATCH, 3);
       if (splits.length != 3) {
         throw new RuntimeException(StringUtils.safeFormat("Error parsing [%s]", input.get(i)));
@@ -79,9 +79,9 @@ public class CpuAcct
 
     CpuAcctMetric(long[] usrTimes, long[] sysTimes)
     {
+      Preconditions.checkArgument(usrTimes.length == sysTimes.length, "Lengths must match");
       this.usrTimes = usrTimes;
       this.sysTimes = sysTimes;
-      Preconditions.checkArgument(usrTimes.length == sysTimes.length, "Lengths must match");
     }
 
     public final int cpuCount()
@@ -130,7 +130,7 @@ public class CpuAcct
       Preconditions.checkArgument(cpu_count == other.cpuCount(), "Cpu count missmatch");
       final long[] sys_times = new long[cpu_count];
       final long[] usr_times = new long[cpu_count];
-      for (int i = 0; i < cpu_count; ++i) {
+      for (int i = 0; i < cpu_count; i++) {
         sys_times[i] = this.sysTimes[i] - other.sysTimes[i];
         usr_times[i] = this.usrTimes[i] - other.usrTimes[i];
       }

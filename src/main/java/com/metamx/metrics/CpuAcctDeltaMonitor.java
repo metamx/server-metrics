@@ -32,12 +32,11 @@ import org.joda.time.DateTime;
 
 public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
 {
-  private static final Logger LOG = new Logger(CpuAcctDeltaMonitor.class);
+  private static final Logger log = new Logger(CpuAcctDeltaMonitor.class);
   private final AtomicReference<SnapshotHolder> priorSnapshot = new AtomicReference<>(null);
   private final Map<String, String[]> dimensions;
 
-  private final
-  PidDiscoverer pidDiscoverer;
+  private final PidDiscoverer pidDiscoverer;
   private final CgroupDiscoverer cgroupDiscoverer;
 
   public CpuAcctDeltaMonitor()
@@ -78,16 +77,16 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
     final DateTime dateTime = new DateTime();
     final SnapshotHolder priorSnapshotHolder = this.priorSnapshot.get();
     if (!priorSnapshot.compareAndSet(priorSnapshotHolder, new SnapshotHolder(snapshot, nanoTime))) {
-      LOG.debug("Pre-empted by another monitor run");
+      log.debug("Pre-empted by another monitor run");
       return false;
     }
     if (priorSnapshotHolder == null) {
-      LOG.info("Detected first run, storing result for next run");
+      log.info("Detected first run, storing result for next run");
       return false;
     }
     final long elapsedNs = nanoTime - priorSnapshotHolder.timestamp;
     if (snapshot.cpuCount() != priorSnapshotHolder.metric.cpuCount()) {
-      LOG.warn(
+      log.warn(
           "Prior CPU count [%d] does not match current cpu count [%d]. Skipping metrics emission",
           priorSnapshotHolder.metric.cpuCount(),
           snapshot.cpuCount()
