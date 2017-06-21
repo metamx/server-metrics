@@ -65,7 +65,7 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       // delta for total, sys, user
       Map<String, Long> procDiff = diff.to(
-          "getProc/cpu", ImmutableMap.of(
+          "proc/cpu", ImmutableMap.of(
               "jvm/cpu/total", procCpu.getTotal(),
               "jvm/cpu/sys", procCpu.getSys(),
               "jvm/cpu/user", procCpu.getUser()

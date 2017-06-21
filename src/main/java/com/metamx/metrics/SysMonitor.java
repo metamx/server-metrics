@@ -296,7 +296,7 @@ public class SysMonitor extends FeedDefiningMonitor
         log.debug("Found FileSystem list: [%s]", Joiner.on(", ").join(fss));
         for (FileSystem fs : fss) {
           // fs.getDevName() appears to give the same results here, but on some nodes results for one disc were substituted by another
-          // LOG: Sigar - /getProc/diskstats /dev/xvdj -> /dev/xvdb [202,16]
+          // LOG: Sigar - /proc/diskstats /dev/xvdj -> /dev/xvdb [202,16]
           final String name = fs.getDirName();
           if (fsTypeWhitelist.contains(fs.getTypeName())) {
             DiskUsage du = null;
