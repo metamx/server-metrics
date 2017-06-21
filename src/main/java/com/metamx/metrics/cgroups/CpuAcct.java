@@ -44,9 +44,9 @@ public class CpuAcct
       if (splits.length != 3) {
         throw new RE("Error parsing [%s]", lines.get(i));
       }
-      final int cpu_num = Integer.parseInt(splits[0]);
-      usrTime[cpu_num] = Long.parseLong(splits[1]);
-      sysTime[cpu_num] = Long.parseLong(splits[2]);
+      final int cpuNum = Integer.parseInt(splits[0]);
+      usrTime[cpuNum] = Long.parseLong(splits[1]);
+      sysTime[cpuNum] = Long.parseLong(splits[2]);
     }
     return new CpuAcctMetric(usrTime, sysTime);
   }
@@ -98,14 +98,14 @@ public class CpuAcct
       return usrTimes;
     }
 
-    public final long usrTime(int cpu_num)
+    public final long usrTime(int cpuNum)
     {
-      return usrTimes[cpu_num];
+      return usrTimes[cpuNum];
     }
 
-    public final long sysTime(int cpu_num)
+    public final long sysTime(int cpu_Num)
     {
-      return sysTimes[cpu_num];
+      return sysTimes[cpu_Num];
     }
 
     public final long usrTime()
@@ -125,15 +125,15 @@ public class CpuAcct
 
     public final CpuAcctMetric cumulativeSince(CpuAcctMetric other)
     {
-      final int cpu_count = cpuCount();
-      Preconditions.checkArgument(cpu_count == other.cpuCount(), "Cpu count missmatch");
-      final long[] sys_times = new long[cpu_count];
-      final long[] usr_times = new long[cpu_count];
-      for (int i = 0; i < cpu_count; i++) {
-        sys_times[i] = this.sysTimes[i] - other.sysTimes[i];
-        usr_times[i] = this.usrTimes[i] - other.usrTimes[i];
+      final int cpuCount = cpuCount();
+      Preconditions.checkArgument(cpuCount == other.cpuCount(), "Cpu count missmatch");
+      final long[] sysTimes = new long[cpuCount];
+      final long[] usrTimes = new long[cpuCount];
+      for (int i = 0; i < cpuCount; i++) {
+        sysTimes[i] = this.sysTimes[i] - other.sysTimes[i];
+        usrTimes[i] = this.usrTimes[i] - other.usrTimes[i];
       }
-      return new CpuAcctMetric(usr_times, sys_times);
+      return new CpuAcctMetric(usrTimes, sysTimes);
     }
   }
 }
