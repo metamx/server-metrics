@@ -113,7 +113,10 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
           snapshot.sysTime(i) - priorSnapshotHolder.metric.sysTime(i)
       ));
     }
-    emitter.emit(builder().build(dateTime, "cgroup/cpu_time_delta_ns_elapsed", elapsedNs));
+    if (snapshot.cpuCount() > 0) {
+      // Don't bother emitting metrics if there aren't actually any cpus (usually from error)
+      emitter.emit(builder().build(dateTime, "cgroup/cpu_time_delta_ns_elapsed", elapsedNs));
+    }
     return true;
   }
 

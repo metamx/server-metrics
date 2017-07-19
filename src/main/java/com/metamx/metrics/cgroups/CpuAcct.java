@@ -19,6 +19,7 @@ package com.metamx.metrics.cgroups;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.metamx.common.RE;
+import com.metamx.common.logger.Logger;
 import com.metamx.metrics.CgroupUtil;
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +29,7 @@ import java.util.stream.LongStream;
 
 public class CpuAcct
 {
+  private static final Logger LOG = new Logger(CpuAcct.class);
   private static final String CGROUP = "cpuacct";
   private static final String CGROUP_ACCT_FILE = "cpuacct.usage_all";
 
@@ -60,9 +62,24 @@ public class CpuAcct
     this.pidDiscoverer = pidDiscoverer;
   }
 
+  /**
+   * Take a snapshot of the existing data.
+   *
+   * @return A snapshot with the data populated or a snapshot with zero-length arrays for data.
+   */
   public CpuAcctMetric snapshot()
   {
-    final File cpuacct = new File(cgroupDiscoverer.discover(CGROUP, pidDiscoverer.getPid()).toFile(), CGROUP_ACCT_FILE);
+    final File cpuacct;
+    try {
+      cpuacct = new File(
+          cgroupDiscoverer.discover(CGROUP, pidDiscoverer.getPid()).toFile(),
+          CGROUP_ACCT_FILE
+      );
+    }
+    catch (RuntimeException re) {
+      LOG.error(re, "Unable to fetch snapshot");
+      return new CpuAcctMetric(new long[0], new long[0]);
+    }
     try {
       return parse(Files.readAllLines(cpuacct.toPath(), Charsets.UTF_8));
     }

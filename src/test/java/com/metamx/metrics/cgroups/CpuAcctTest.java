@@ -16,6 +16,7 @@
 
 package com.metamx.metrics.cgroups;
 
+import com.metamx.common.RE;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -60,6 +61,18 @@ public class CpuAcctTest
     );
     Assert.assertTrue((cpuacctDir.isDirectory() && cpuacctDir.exists()) || cpuacctDir.mkdirs());
     TestUtils.copyResource("/cpuacct.usage_all", new File(cpuacctDir, "cpuacct.usage_all"));
+  }
+
+  @Test
+  public void testWontCrash()
+  {
+    final CpuAcct cpuAcct = new CpuAcct(new ProcCgroupDiscoverer(), () -> {
+      throw new RE("Testing exception");
+    });
+    final CpuAcct.CpuAcctMetric metric = cpuAcct.snapshot();
+    Assert.assertEquals(0L, metric.cpuCount());
+    Assert.assertEquals(0L, metric.usrTime());
+    Assert.assertEquals(0L, metric.sysTime());
   }
 
   @Test

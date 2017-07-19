@@ -19,7 +19,6 @@ package com.metamx.metrics;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.StringUtils;
 import com.metamx.metrics.cgroups.CgroupDiscoverer;
-import com.metamx.metrics.cgroups.PidDiscoverer;
 import com.metamx.metrics.cgroups.ProcCgroupDiscoverer;
 import com.metamx.metrics.cgroups.TestUtils;
 import java.io.File;
@@ -67,6 +66,24 @@ public class CpuAcctDeltaMonitorTest
   }
 
   @Test
+  public void testMonitorWontCrash() throws Exception
+  {
+    final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
+        "some_feed",
+        ImmutableMap.of(),
+        () -> {
+          throw new RuntimeException("Test exception");
+        },
+        new ProcCgroupDiscoverer()
+    );
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    monitor.doMonitor(emitter);
+    monitor.doMonitor(emitter);
+    monitor.doMonitor(emitter);
+    Assert.assertTrue(emitter.getEvents().isEmpty());
+  }
+
+  @Test
   public void testSimpleMonitor() throws Exception
   {
     final File cpuacct = new File(cpuacctDir, "cpuacct.usage_all");
@@ -76,14 +93,11 @@ public class CpuAcctDeltaMonitorTest
         fos.write(StringUtils.toUtf8(String.format("%d 0 0\n", i)));
       }
     }
-    final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor("some_feed", ImmutableMap.of(), new PidDiscoverer()
-    {
-      @Override
-      public long getPid()
-      {
-        return PID;
-      }
-    }, (cgroup, pid) -> cpuacctDir.toPath());
+    final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
+        "some_feed",
+        ImmutableMap.of(),
+        () -> PID, (cgroup, pid) -> cpuacctDir.toPath()
+    );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertFalse(monitor.doMonitor(emitter));
     // First should just cache
