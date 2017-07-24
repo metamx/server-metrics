@@ -18,50 +18,12 @@ package com.metamx.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.core.Event;
-import com.metamx.emitter.service.ServiceEmitter;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class MonitorsTest
 {
-  private static class StubServiceEmitter extends ServiceEmitter
-  {
-    private List<Event> events = new ArrayList<>();
-
-    public StubServiceEmitter(String service, String host)
-    {
-      super(service, host, null);
-    }
-
-    @Override
-    public void emit(Event event)
-    {
-      events.add(event);
-    }
-
-    public List<Event> getEvents()
-    {
-      return events;
-    }
-
-    @Override
-    public void start()
-    {
-    }
-
-    @Override
-    public void flush() throws IOException
-    {
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-    }
-  }
 
   @Test
   public void testSetFeed()
