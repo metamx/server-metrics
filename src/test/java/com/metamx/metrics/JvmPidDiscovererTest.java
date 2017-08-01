@@ -24,6 +24,6 @@ public class JvmPidDiscovererTest
   @Test
   public void getPid() throws Exception
   {
-    Assert.assertNotNull(new JvmPidDiscoverer().getPid());
+    Assert.assertNotNull(JvmPidDiscoverer.instance().getPid());
   }
 }

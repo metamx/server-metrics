@@ -26,6 +26,20 @@ import java.util.regex.Pattern;
  */
 public class JvmPidDiscoverer implements PidDiscoverer
 {
+  private static final JvmPidDiscoverer INSTANCE = new JvmPidDiscoverer();
+
+  public static JvmPidDiscoverer instance()
+  {
+    return INSTANCE;
+  }
+
+  /**
+   * use {JvmPidDiscoverer.instance()}
+   */
+  private JvmPidDiscoverer()
+  {
+  }
+
   /**
    * Returns the PID as a best guess. This uses methods that are not guaranteed to actually be the PID.
    * <p>

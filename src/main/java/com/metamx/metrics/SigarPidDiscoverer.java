@@ -18,6 +18,21 @@ package com.metamx.metrics;
 
 public class SigarPidDiscoverer implements PidDiscoverer
 {
+  private static final SigarPidDiscoverer INSTANCE = new SigarPidDiscoverer();
+
+  public static SigarPidDiscoverer instance()
+  {
+    return INSTANCE;
+  }
+
+  /**
+   * use {SigarPidDiscoverer.instance()}
+   */
+  private SigarPidDiscoverer()
+  {
+
+  }
+
   @Override
   public long getPid()
   {

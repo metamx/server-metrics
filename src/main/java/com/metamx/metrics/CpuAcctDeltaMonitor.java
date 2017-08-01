@@ -49,7 +49,7 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
 
   public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions, final String feed)
   {
-    this(feed, dimensions, new JvmPidDiscoverer(), new ProcCgroupDiscoverer());
+    this(feed, dimensions, JvmPidDiscoverer.instance(), new ProcCgroupDiscoverer());
   }
 
   public CpuAcctDeltaMonitor(

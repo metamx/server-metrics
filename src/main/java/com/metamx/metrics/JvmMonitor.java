@@ -52,7 +52,7 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   public JvmMonitor(Map<String, String[]> dimensions, String feed)
   {
-    this(dimensions, feed, new JvmPidDiscoverer());
+    this(dimensions, feed, JvmPidDiscoverer.instance());
   }
 
   public JvmMonitor(Map<String, String[]> dimensions, String feed, PidDiscoverer pidDiscoverer)

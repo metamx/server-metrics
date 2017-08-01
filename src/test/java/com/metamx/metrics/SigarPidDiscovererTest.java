@@ -16,7 +16,6 @@
 
 package com.metamx.metrics;
 
-import com.metamx.metrics.SigarPidDiscoverer;
 import org.junit.Test;
 
 public class SigarPidDiscovererTest
@@ -25,6 +24,6 @@ public class SigarPidDiscovererTest
   public void simpleTest()
   {
     // Just make sure we don't crash
-    new SigarPidDiscoverer().getPid();
+    SigarPidDiscoverer.instance().getPid();
   }
 }
