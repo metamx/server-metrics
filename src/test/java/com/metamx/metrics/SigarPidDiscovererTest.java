@@ -14,9 +14,16 @@
  * limitations under the License.
  */
 
-package com.metamx.metrics.cgroups;
+package com.metamx.metrics;
 
-public interface PidDiscoverer
+import org.junit.Test;
+
+public class SigarPidDiscovererTest
 {
-  long getPid();
+  @Test
+  public void simpleTest()
+  {
+    // Just make sure we don't crash
+    SigarPidDiscoverer.instance().getPid();
+  }
 }

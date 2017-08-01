@@ -23,8 +23,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.cgroups.CgroupDiscoverer;
 import com.metamx.metrics.cgroups.CpuAcct;
-import com.metamx.metrics.cgroups.JvmPidDiscoverer;
-import com.metamx.metrics.cgroups.PidDiscoverer;
 import com.metamx.metrics.cgroups.ProcCgroupDiscoverer;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,7 +49,7 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
 
   public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions, final String feed)
   {
-    this(feed, dimensions, new JvmPidDiscoverer(), new ProcCgroupDiscoverer());
+    this(feed, dimensions, JvmPidDiscoverer.instance(), new ProcCgroupDiscoverer());
   }
 
   public CpuAcctDeltaMonitor(

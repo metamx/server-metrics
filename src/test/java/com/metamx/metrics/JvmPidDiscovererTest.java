@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package com.metamx.metrics.cgroups;
+package com.metamx.metrics;
 
+import org.junit.Assert;
 import org.junit.Test;
 
-public class SigarPidDiscovererTest
+public class JvmPidDiscovererTest
 {
   @Test
-  public void simpleTest()
+  public void getPid() throws Exception
   {
-    // Just make sure we don't crash
-    new SigarPidDiscoverer().getPid();
+    Assert.assertNotNull(JvmPidDiscoverer.instance().getPid());
   }
 }

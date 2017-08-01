@@ -36,12 +36,13 @@ import org.gridkit.lab.jvm.perfdata.JStatData.TickCounter;
 public class JvmMonitor extends FeedDefiningMonitor
 {
   private final Map<String, String[]> dimensions;
+  private final long pid;
 
   private final GcCounters gcCounters = new GcCounters();
 
   public JvmMonitor()
   {
-    this(ImmutableMap.<String, String[]>of());
+    this(ImmutableMap.of());
   }
 
   public JvmMonitor(Map<String, String[]> dimensions)
@@ -51,9 +52,15 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   public JvmMonitor(Map<String, String[]> dimensions, String feed)
   {
+    this(dimensions, feed, JvmPidDiscoverer.instance());
+  }
+
+  public JvmMonitor(Map<String, String[]> dimensions, String feed, PidDiscoverer pidDiscoverer)
+  {
     super(feed);
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
+    this.pid = Preconditions.checkNotNull(pidDiscoverer).getPid();
   }
 
   @Override
@@ -132,10 +139,9 @@ public class JvmMonitor extends FeedDefiningMonitor
 
     GcCounters()
     {
-      long currentProcessId = SigarUtil.getCurrentProcessId();
       // connect to itself
-      JStatData jStatData = JStatData.connect(currentProcessId);
-      Map<String, JStatData.Counter<?>> jStatCounters = jStatData.getAllCounters();
+      final JStatData jStatData = JStatData.connect(pid);
+      final Map<String, JStatData.Counter<?>> jStatCounters = jStatData.getAllCounters();
 
       generations.add(new GcGeneration(jStatCounters, 0, "young"));
       generations.add(new GcGeneration(jStatCounters, 1, "old"));
@@ -159,7 +165,8 @@ public class JvmMonitor extends FeedDefiningMonitor
     private final GcGenerationCollector collector;
     private final List<GcGenerationSpace> spaces = new ArrayList<>();
 
-    GcGeneration(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String name){
+    GcGeneration(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, String name)
+    {
       this.name = name.toLowerCase();
 
       long spacesCount = ((JStatData.LongCounter) jStatCounters.get(
@@ -207,7 +214,8 @@ public class JvmMonitor extends FeedDefiningMonitor
     private long lastInvocations = 0;
     private long lastCpuNanos = 0;
 
-    GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex){
+    GcGenerationCollector(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex)
+    {
       String collectorKeyPrefix = String.format("sun.gc.collector.%d", genIndex);
 
       String nameKey = String.format("%s.name", collectorKeyPrefix);
@@ -270,7 +278,8 @@ public class JvmMonitor extends FeedDefiningMonitor
     private final LongCounter usedCounter;
     private final LongCounter initCounter;
 
-    GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex){
+    GcGenerationSpace(Map<String, JStatData.Counter<?>> jStatCounters, long genIndex, long spaceIndex)
+    {
       String spaceKeyPrefix = String.format("sun.gc.generation.%d.space.%d", genIndex, spaceIndex);
 
       String nameKey = String.format("%s.name", spaceKeyPrefix);

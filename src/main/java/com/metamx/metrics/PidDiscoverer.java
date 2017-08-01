@@ -14,15 +14,9 @@
  * limitations under the License.
  */
 
-package com.metamx.metrics.cgroups;
+package com.metamx.metrics;
 
-import com.metamx.metrics.SigarUtil;
-
-public class SigarPidDiscoverer implements PidDiscoverer
+public interface PidDiscoverer
 {
-  @Override
-  public long getPid()
-  {
-    return SigarUtil.getCurrentProcessId();
-  }
+  long getPid();
 }
