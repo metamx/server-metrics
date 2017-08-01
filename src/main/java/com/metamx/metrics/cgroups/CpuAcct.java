@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.metamx.common.RE;
 import com.metamx.common.logger.Logger;
 import com.metamx.metrics.CgroupUtil;
+import com.metamx.metrics.PidDiscoverer;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;

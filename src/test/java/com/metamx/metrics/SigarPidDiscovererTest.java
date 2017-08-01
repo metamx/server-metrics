@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.metamx.metrics.cgroups;
+package com.metamx.metrics;
 
+import com.metamx.metrics.SigarPidDiscoverer;
 import org.junit.Test;
 
 public class SigarPidDiscovererTest

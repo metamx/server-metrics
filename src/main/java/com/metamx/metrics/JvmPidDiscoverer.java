@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.metamx.metrics.cgroups;
+package com.metamx.metrics;
 
 import com.metamx.common.RE;
 import java.lang.management.ManagementFactory;
 import java.util.regex.Pattern;
 
 /**
- * For systems that for whatever reason cannot use Sigar (through com.metamx.metrics.cgroups.SigarPidDiscoverer ),
+ * For systems that for whatever reason cannot use Sigar (through com.metamx.metrics.SigarPidDiscoverer ),
  * this attempts to get the PID from the JVM "name".
  */
 public class JvmPidDiscoverer implements PidDiscoverer

@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package com.metamx.metrics.cgroups;
-
-import com.metamx.metrics.SigarUtil;
+package com.metamx.metrics;
 
 public class SigarPidDiscoverer implements PidDiscoverer
 {

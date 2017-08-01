@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.metamx.metrics.cgroups;
+package com.metamx.metrics;
 
 import org.junit.Assert;
 import org.junit.Test;
